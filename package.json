@@ -7,7 +7,8 @@
     "dev": "vite --host",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "serve -s dist"
   },
   "engines": {
     "node": "24"
@@ -51,6 +52,7 @@
     "react-router-dom": "^7.2.0",
     "react-select": "^5.10.1",
     "recharts": "^2.15.3",
+    "serve": "^14.2.6",
     "tailwind-merge": "^3.0.1",
     "tw-animate-css": "^1.3.8",
     "yup": "^1.6.1"
