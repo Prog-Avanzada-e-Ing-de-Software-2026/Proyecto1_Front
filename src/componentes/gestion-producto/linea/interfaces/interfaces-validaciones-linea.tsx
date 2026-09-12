@@ -8,6 +8,7 @@ export interface FormValues {
   observacion?: string | null;
   stockMinimo?: number;
   utilizaStockMinimo?: boolean;
+  superLineaId?: number;
 }
 
 export interface SublineasEnPayload {
@@ -18,7 +19,7 @@ export interface SublineasEnPayload {
 
 //===================== schema de validacion ============================================//
 
-export const schema = (utilizaStockMinimo: boolean) =>
+export const schema = (utilizaStockMinimo: boolean, isCreate: boolean) =>
   yup.object().shape({
     denominacion: yup
       .string()
@@ -34,6 +35,16 @@ export const schema = (utilizaStockMinimo: boolean) =>
       otherwise: (schema) => schema.optional(),
     }),
     utilizaStockMinimo: yup.boolean().optional(),
+    superLineaId: yup.number().when([], {
+      is: () => isCreate,
+      then: (schema) =>
+        schema
+          .transform((value, originalValue) => (originalValue === "" ? null : value))
+          .typeError("La SuperLínea es obligatoria.")
+          .required("La SuperLínea es obligatoria.")
+          .moreThan(0, "La SuperLínea es obligatoria."),
+      otherwise: (schema) => schema.optional(),
+    }),
    
   });
 
@@ -47,4 +58,3 @@ export const transformData = (linea: Linea): FormValues => {
     utilizaStockMinimo: linea.utilizaStockMinimo ?? false,
   };
 };
-
