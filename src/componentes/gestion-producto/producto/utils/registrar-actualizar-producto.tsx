@@ -160,7 +160,14 @@ export default function RegistrarActualizarProductoForm({
           setValue("utilizaPack", producto.utilizaPack || false);
         
           console.error("llega aca", producto);
-        
+        } else {
+          const [marcasResponse, lineasResponse] = await Promise.all([
+            ProductoService.obtenerTotales({ denominacion: "" }, "marcas"),
+            ProductoService.obtenerTotales({ denominacion: "" }, "lineas"),
+          ]);
+
+          setMarcas(marcasResponse.data);
+          setLineas(lineasResponse.data);
         }
       } catch (error) {
         console.error("Error al obtener los datos:", error);
