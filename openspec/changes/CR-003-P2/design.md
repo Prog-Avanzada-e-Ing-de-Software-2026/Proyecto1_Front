@@ -2,7 +2,7 @@
 
 ## Enfoque técnico
 
-Se ampliará `gestion-producto/superlinea` con la composición activa de Línea: pantalla coordinadora, componentes responsivos, hook/modal, formulario, servicio Axios e interfaces. Se reutilizarán `TablaAGGrid`, `Paginacion`, `InformacionAuditoria`, alertas, confirmaciones, filtros y `parseApiError`; no se creará un CRUD genérico. Los endpoints y DTO se limitarán a `docs/contracts/openapi.json`.
+Se completará `gestion-producto/superlinea` con patrones existentes y contratos OpenAPI, sin CRUD genérico. Edición usará `isDirty`/`isSubmitting` contra defaults normalizados; alta no cambia.
 
 ## Decisiones de arquitectura
 
@@ -11,6 +11,7 @@ Se ampliará `gestion-producto/superlinea` con la composición activa de Línea:
 | Extender `createCrudService` | Incluye impresión no soportada | No usarlo para SuperLínea; ampliar su servicio explícito evita exponer contratos inexistentes. |
 | Pantalla específica basada en Línea | Duplica estructura visual | Elegida: conserva límites, estado y convenciones reales sin ampliar el impacto. |
 | Comparar la asociación en el formulario | Requiere conservar el ID inicial | Elegida: `transformData` toma `LineaDto.superLinea.id`; el submit agrega `superLineaId` únicamente si difiere. |
+| Comparación manual o `dirtyFields` | Estado redundante | Rechazada: defaults normalizados e `isDirty`; `onSubmit` cubre envíos indirectos. |
 | Roles propios para SuperLínea | Podrían divergir de Línea | Rechazada: menú y ruta copiarán exactamente ubicación y guardas de Línea. |
 
 ## Flujo de datos y trazabilidad
@@ -39,8 +40,8 @@ Editar Línea → GET /linea/{id} → superLinea.id inicial
 |---|---|---|
 | `src/interfaces/gestion-producto/superlinea/interfaces-superlinea.tsx` | Modificar | Alinear DTO, filtros y payloads create/update. |
 | `src/componentes/gestion-producto/superlinea/services/superlinea-service.ts` | Modificar | Implementar los siete contratos explícitos, sin impresión/restauración. |
-| `src/componentes/gestion-producto/superlinea/interfaces/interfaces-validaciones-superlinea.tsx` | Modificar | Añadir transformación para edición y validación compartida. |
-| `src/componentes/gestion-producto/superlinea/utils/registrar-superlinea.tsx` | Modificar | Admitir alta independiente/anidada y edición, mensajes y errores conservando estado. |
+| `src/componentes/gestion-producto/superlinea/interfaces/interfaces-validaciones-superlinea.tsx` | Modificar | Normalizar `observacion` nula a `""` en defaults de edición. |
+| `src/componentes/gestion-producto/superlinea/utils/registrar-superlinea.tsx` | Modificar | Usar `isDirty`/`isSubmitting`, guardar cambios solamente y normalizar `""` a `null` solo al actualizar; preservar el alta. |
 | `src/componentes/gestion-producto/superlinea/utils/consultar-superlinea.tsx` | Crear | Coordinar consulta, paginación, CRUD, auditoría y alertas. |
 | `src/componentes/gestion-producto/superlinea/componentes/filtros-superlinea.tsx` | Crear | Filtro contractual y opción `incluirEliminados`. |
 | `src/componentes/gestion-producto/superlinea/componentes/datos-tabla.tsx` | Crear | Tabla y acciones de escritorio. |
@@ -58,11 +59,11 @@ Editar Línea → GET /linea/{id} → superLinea.id inicial
 
 ## Interfaces / contratos
 
-`SearchSuperLineaParams` contiene `denominacion?`, `skip?`, `take?`, `incluirEliminados?`; `UpdateSuperLineaDto` exige `usuarioUpdatedId`; `UpdateLineaDto` exige `usuarioUpdatedId` y admite `superLineaId?`. El servicio devuelve `SuperLineaListResponseDto`, `SuperLineaDto`, `Auditoria` o `ResponsePost` según OpenAPI.
+Contratos siguen OpenAPI. En edición, `observacion` nula se representa como `""` y vuelve como `null` si queda vacía.
 
 ## Estrategia de verificación
 
-No existe runner automatizado. Se hará revisión estática del payload (alta, edición sin cambio y reasignación), y prueba manual de búsqueda/paginación, CRUD, auditoría, alta anidada/cancelación, catálogo vacío, permisos equivalentes y respuestas 403/404/409 simuladas o provistas por API. Después: `yarn build`, `yarn lint` y `yarn tsc -b`, separando los fallos preexistentes documentados de regresiones nuevas.
+No existe runner automatizado. Revisión estática: defaults completos, normalización, `disabled={superLinea ? !isDirty || isSubmitting : isSubmitting}` y guarda pre-`actualizar`. Prueba manual: edición nula/vacía inicia deshabilitada; cambiar habilita; restituir ambos campos deshabilita; submit indirecto no ejecuta PUT; durante PUT queda deshabilitado; alta solo se bloquea durante POST. Después: `yarn build`, `yarn lint` y `yarn tsc -b`, distinguiendo baseline.
 
 ## Matriz de amenazas
 

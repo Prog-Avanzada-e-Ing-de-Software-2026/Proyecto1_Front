@@ -20,6 +20,21 @@ The system MUST provide permitted users with paginated search, detail, creation,
 - WHEN the user saves a SuperLínea, or updates it with `usuarioUpdatedId`
 - THEN the system MUST call the documented endpoint and show the returned message
 
+#### Scenario: Unchanged standalone update
+- GIVEN standalone edit mode is initialized with `denominacion` and `observacion`
+- WHEN neither field differs from its initialized normalized value
+- THEN the “Actualizar” button MUST remain disabled and submission MUST NOT call the update endpoint, including indirect submission attempts
+
+#### Scenario: Reverted standalone update
+- GIVEN standalone edit mode has changed one or both editable fields
+- WHEN both fields are returned to their initialized normalized values
+- THEN the “Actualizar” button MUST become disabled again
+
+#### Scenario: Submitting standalone update
+- GIVEN standalone edit mode has a valid change
+- WHEN update submission is in progress
+- THEN the submit button MUST remain disabled
+
 #### Scenario: Validation and API failure
 - GIVEN invalid data or a 400, 401, 403, 404, or 409 response
 - WHEN the operation is submitted
