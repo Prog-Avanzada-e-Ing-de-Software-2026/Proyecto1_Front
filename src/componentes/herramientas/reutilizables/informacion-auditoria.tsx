@@ -1,36 +1,15 @@
-import { jwtDecode } from "jwt-decode";
-import { Auditoria } from "../../../interfaces/generales/interfaces-generales";
+import { Auditoria, Rol } from "../../../interfaces/generales/interfaces-generales";
 import { Card } from "../../ui/Card";
-import { useEffect, useState } from "react";
-import UsuarioService from "../../gestion-usuario/usuario-service";
 import { Clock, Edit3, Info, Plus, Shield, Trash2, User } from "lucide-react";
 import { Badge } from "../../ui/Badge";
+import { hasRole } from "../../../utils/auth";
 
 interface InformacionAuditoriaProps {
   auditoria: Auditoria;
   onClose?: () => void;
 }
 
-export default function InformacionAuditoria({ auditoria, onClose }: InformacionAuditoriaProps) {
-  const token = localStorage.getItem("Token");
-  const rolId = token ? jwtDecode<{ rolId: number }>(token).rolId : 0;
-  const [rol, setRol] = useState<string>("");
-
-  const fetchData = async () => {
-    try {
-      const roleResponse = await UsuarioService.obtenerRol(rolId);
-
-      const roleName = roleResponse?.data?.denominacion;
-
-      setRol(roleName || "Desconocido");
-    } catch (err: any) {
-      console.error("Error al obtener productos:", err);
-    }
-  };
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+export default function InformacionAuditoria({ auditoria, onClose }: Readonly<InformacionAuditoriaProps>) {
   const getActionBadge = (type: "created" | "updated" | "deleted") => {
     const configs = {
       created: {
@@ -84,7 +63,7 @@ export default function InformacionAuditoria({ auditoria, onClose }: Informacion
         {/* Contenido */}
         <div className="p-6 space-y-6">
           {/* ID para usuarios Root */}
-          {rol === "Root" && (
+          {hasRole(Rol.ROOT) && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div className="flex items-center gap-2 text-amber-800">
                 <Info size={16} />

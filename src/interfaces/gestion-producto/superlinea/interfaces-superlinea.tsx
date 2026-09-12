@@ -27,9 +27,23 @@ export interface SuperLineaDto {
   denominacion: string;
   observacion: string | null;
   deletedAt: string | null;
+  sistema: number;
 }
 
 export interface SuperLineaListResponseDto {
   data: SuperLineaDto[];
   total: number;
+}
+
+export interface SearchSuperLineaParams {
+  denominacion?: string;
+  skip?: number;
+  take?: number;
+  incluirEliminados?: boolean;
+}
+
+export interface UpdateSuperLineaDto {
+  denominacion: string;
+  observacion?: string | null;
+  usuarioUpdatedId: number;
 }

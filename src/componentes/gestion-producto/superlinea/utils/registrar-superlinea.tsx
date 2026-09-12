@@ -13,20 +13,24 @@ import {
 import { getUsuarioId } from "../../../../utils/auth";
 import { parseApiError } from "../../../../utils/errores";
 import { FormValues, schema } from "../interfaces/interfaces-validaciones-superlinea";
+import { transformData } from "../interfaces/interfaces-validaciones-superlinea";
 import SuperLineaService from "../services/superlinea-service";
+import { SuperLineaDto } from "../../../../interfaces/gestion-producto/superlinea/interfaces-superlinea";
 
 export default function RegistrarSuperlinea({
   onClose,
   onSuccess,
+  superLinea,
 }: Readonly<{
   onClose: () => void;
-  onSuccess: () => Promise<void>;
+  onSuccess: (message: string) => Promise<void> | void;
+  superLinea?: SuperLineaDto;
 }>) {
   const usuarioId = getUsuarioId();
   const { showConfirmation, AlertasConfirmacion } = useConfirmation();
   const methods = useForm<FormValues>({
     resolver: yupResolver(schema) as any,
-    defaultValues: { denominacion: "", observacion: null },
+    defaultValues: superLinea ? transformData(superLinea) : { denominacion: "", observacion: null },
   });
   const {
     handleSubmit,
@@ -36,11 +40,10 @@ export default function RegistrarSuperlinea({
 
   const onSubmit = async (formData: FormValues) => {
     try {
-      await SuperLineaService.nuevo({
-        ...formData,
-        usuarioCreatedId: usuarioId,
-      });
-      await onSuccess();
+      const response = superLinea
+        ? await SuperLineaService.actualizar(superLinea.id, { ...formData, usuarioUpdatedId: usuarioId })
+        : await SuperLineaService.nuevo({ ...formData, usuarioCreatedId: usuarioId });
+      await onSuccess(response.mensaje);
       onClose();
     } catch (error) {
       setError("root", { type: "manual", message: parseApiError(error) });
@@ -64,8 +67,8 @@ export default function RegistrarSuperlinea({
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[60] overflow-y-auto py-5">
       <Card className="w-full max-w-2xl bg-white mx-auto shadow-lg rounded-2xl overflow-hidden">
         <EncabezadoFormularios
-          title="Registrar SuperLínea"
-          subtitle="Ingresa los datos de la nueva SuperLínea."
+          title={superLinea ? "Actualizar SuperLínea" : "Registrar SuperLínea"}
+          subtitle={superLinea ? "Modifica los datos de la SuperLínea." : "Ingresa los datos de la nueva SuperLínea."}
           icon={<Tag className="form-icon" />}
           onClose={handleOnClose}
         />
@@ -93,7 +96,7 @@ export default function RegistrarSuperlinea({
 
             <CardFooter className="flex justify-center">
               <Button type="submit" disabled={isSubmitting} className="btn btn-dark">
-                {isSubmitting ? "Registrando..." : "Registrar"}
+                {isSubmitting ? (superLinea ? "Actualizando..." : "Registrando...") : superLinea ? "Actualizar" : "Registrar"}
               </Button>
             </CardFooter>
           </form>

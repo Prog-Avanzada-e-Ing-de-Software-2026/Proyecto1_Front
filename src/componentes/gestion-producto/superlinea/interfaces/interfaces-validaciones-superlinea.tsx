@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { SuperLineaDto } from "../../../../interfaces/gestion-producto/superlinea/interfaces-superlinea";
 
 export interface FormValues {
   denominacion: string;
@@ -14,4 +15,9 @@ export const schema = yup.object<FormValues>().shape({
     .max(255, "Máximo 255 caracteres.")
     .matches(/^[A-Za-z0-9 áéíóúÁÉÍÓÚñÑ]+$/, "Solo se permiten letras, números y espacios."),
   observacion: yup.string().optional().nullable(),
+});
+
+export const transformData = (superLinea: SuperLineaDto): FormValues => ({
+  denominacion: superLinea.denominacion,
+  observacion: superLinea.observacion ?? null,
 });

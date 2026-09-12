@@ -1,8 +1,12 @@
 import {
   CreateSuperLineaDto,
+  SearchSuperLineaParams,
   SelectSuperlinea,
+  SuperLineaDto,
   SuperLineaListResponseDto,
+  UpdateSuperLineaDto,
 } from "../../../../interfaces/gestion-producto/superlinea/interfaces-superlinea";
+import { Auditoria, ResponsePost } from "../../../../interfaces/generales/interfaces-generales";
 import ApiService from "../../../../utils/apiService";
 
 const contractError = (message: string) => ({
@@ -37,7 +41,21 @@ const SuperLineaService = {
   },
 
   nuevo: (payload: CreateSuperLineaDto) =>
-    ApiService.post("/superlinea", payload),
+    ApiService.post("/superlinea", payload) as Promise<ResponsePost>,
+
+  obtener: (params: SearchSuperLineaParams) =>
+    ApiService.get("/superlinea/search-by", params) as Promise<SuperLineaListResponseDto>,
+
+  obtenerId: (id: number) => ApiService.get(`/superlinea/${id}`) as Promise<SuperLineaDto>,
+
+  actualizar: (id: number, payload: UpdateSuperLineaDto) =>
+    ApiService.put(`/superlinea/${id}`, payload) as Promise<ResponsePost>,
+
+  eliminar: (id: number, usuarioId: number) =>
+    ApiService.delete(`/superlinea/${id}`, usuarioId) as Promise<ResponsePost>,
+
+  obtenerAuditoria: (id: number) =>
+    ApiService.get(`/superlinea/${id}/audit`) as Promise<Auditoria>,
 };
 
 export default SuperLineaService;
