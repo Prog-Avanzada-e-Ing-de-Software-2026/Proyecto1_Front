@@ -2,11 +2,11 @@
 
 Fecha: 2026-09-13. Backend de prueba: `/home/vcorrea/prog-avanz/backend` en `http://localhost:3001/api`, datos de desarrollo. Sin tokens registrados.
 
-## R1 — Alcance y ajuste válidos: CONFORME (contrato + código; recorrido UI pendiente)
+## R1 — Alcance y ajuste válidos: CONFORME
 
 - Schema Yup exige alcance/operación/tipo enums, valor numérico finito > 0 y `lineaId` entero positivo solo en `LINEA`; `crearPayload` omite `lineaId` en global.
 - Selector de Línea: el backend responde 400 si se omite `?denominacion=` (verificado en vivo); el servicio envía `{ denominacion: "" }` y consume solo `data` (9 líneas, `total: 1` ignorado).
-- Pendiente: recorrido manual en navegador de las 8 combinaciones, teclado y vista móvil (task 5.1).
+- Recorrido UI por el usuario 2026-09-13: las 8 combinaciones global/por Línea × aumento/disminución × porcentaje/monto, OK.
 
 ## R2 — Confirmación y contrato: CONFORME
 
@@ -14,11 +14,12 @@ Fecha: 2026-09-13. Backend de prueba: `/home/vcorrea/prog-avanz/backend` en `htt
 - Sin identidad/items/monto/porcentaje como propiedades; el usuario sale del Bearer token.
 - Confirmación con resumen completo; cancelación sin request; bloqueo de doble envío desde la confirmación con liberación en `finally`.
 
-## R3 — Autenticación y autorización: CONFORME (código; recorrido por rol en navegador pendiente)
+## R3 — Autenticación y autorización: CONFORME
 
 - Ruta `/admin/cambio-precios-masivo` bajo `PrivateRoute([ROOT, ADMINISTRADOR, EMPLEADO])`; entrada de menú con esos roles; padre ampliado con EMPLEADO sin tocar otros hijos.
 - `PrivateRoute`: token antes de `jwtDecode`, malformado → login, sin rol → aviso y retorno a `/admin`.
 - En vivo: sin token → 401 `"Token no encontrado"` en ambos endpoints.
+- Recorrido UI por el usuario 2026-09-13: Root/Administrador/Empleado ven la entrada y acceden; rol ajeno denegado, OK.
 
 ## R4 — Resultado autoritativo: CONFORME
 
@@ -30,6 +31,7 @@ Fecha: 2026-09-13. Backend de prueba: `/home/vcorrea/prog-avanz/backend` en `htt
 - En vivo: valor 0 → 400; línea 99999 → 404 `"No se encontraron productos para actualizar."`; sin token → 401.
 - `resultado` se limpia tras confirmar una nueva petición; 401 bloquea el formulario y ofrece login sin reenviar; sin reintentos automáticos.
 - 500 por precio inválido y 403/red verificados por lectura de código (`errorPrecios` + `parseApiError`).
+- Recorrido UI por el usuario 2026-09-13: validación, cancelación sin envío, doble clic con envío único, resultados repetidos y sesión, OK.
 
 ## R6 — Sustitución y navegación: CONFORME
 
@@ -59,5 +61,4 @@ Logs: `/tmp/cr006-{build,lint,tsc}-before.log` y `/tmp/cr006-{build,lint,tsc}-af
 
 ## Pendientes antes del archivado
 
-- 5.1 recorrido UI en navegador (8 combinaciones, cancelación, doble clic, roles por menú/URL, resultados repetidos).
-- 5.4 cierre formal y 5.5 archivado tras 5.1.
+Ninguno. Recorrido UI 5.1 reportado todo OK por el usuario el 2026-09-13. Listo para 5.5 archivar.
