@@ -10,7 +10,8 @@ export interface Linea {
   deletedAt: string | null;
   usuarioCreatedId: number;
   usuarioUpdatedId: number;
-  superlinea: SelectSuperlinea;
+  superLinea?: SelectSuperlinea;
+  superlinea?: SelectSuperlinea;
   sublineas: SelectSublinea[];
   sistema: number;
   stockMinimo: number | null;
@@ -33,4 +34,13 @@ export interface ConsultarLinea {
 export interface SelectLinea {
   id: number;
   denominacion: string;
+}
+
+export interface UpdateLineaDto {
+  denominacion: string;
+  observacion?: string | null;
+  stockMinimo?: number;
+  utilizaStockMinimo?: boolean;
+  usuarioUpdatedId: number;
+  superLineaId?: number;
 }

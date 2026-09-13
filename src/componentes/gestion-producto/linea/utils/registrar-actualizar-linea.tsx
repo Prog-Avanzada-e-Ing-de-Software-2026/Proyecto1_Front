@@ -39,7 +39,7 @@ export default function RegistrarActualizarLineaForm({
   const { showConfirmation, AlertasConfirmacion } = useConfirmation();
   const [rStockCritico, setStockCritico] = useState(false);
   const [superlineas, setSuperlineas] = useState<SelectSuperlinea[]>([]);
-  const [superlineasLoading, setSuperlineasLoading] = useState(!linea);
+  const [superlineasLoading, setSuperlineasLoading] = useState(true);
   const [superlineasError, setSuperlineasError] = useState<string>();
   const [mostrarFormularioSuperlinea, setMostrarFormularioSuperlinea] = useState(false);
   const [superlineaSuccess, setSuperlineaSuccess] = useState<string>();
@@ -91,9 +91,7 @@ export default function RegistrarActualizarLineaForm({
   }, [clearErrors, setError]);
 
   useEffect(() => {
-    if (!linea) {
-      cargarSuperlineas();
-    }
+    cargarSuperlineas();
   }, [cargarSuperlineas, linea]);
 
   useEffect(() => {
@@ -116,7 +114,13 @@ export default function RegistrarActualizarLineaForm({
   const onSubmit = async (formData: FormValues) => {
     try {
       if (linea) {
-        const payload = { ...formData, usuarioUpdatedId: usuarioId };
+        const { superLineaId, ...lineaValues } = formData;
+        const superLineaInicialId = linea.superLinea?.id ?? linea.superlinea?.id;
+        const payload = {
+          ...lineaValues,
+          usuarioUpdatedId: usuarioId,
+          ...(superLineaId !== superLineaInicialId ? { superLineaId } : {}),
+        };
         const response: ResponsePost = await LineaService.actualizar(linea.id, payload);
         onClose();
         onSuccess(response.mensaje);
@@ -179,19 +183,17 @@ export default function RegistrarActualizarLineaForm({
                   <FormInput name="observacion" label="Observación" placeholder="Ingresa una observación (opcional)" />
                 </div>
 
-                {!linea && (
-                  <SuperlineasSelector
-                    superlineas={superlineas}
-                    superLineaId={watch("superLineaId")}
-                    disabled={isSubmitting}
-                    loading={superlineasLoading}
-                    error={errors.superLineaId?.message ?? superlineasError}
-                    onChange={(superLinea) =>
-                      setValue("superLineaId", superLinea?.id, { shouldValidate: true })
-                    }
-                    onAgregar={() => setMostrarFormularioSuperlinea(true)}
-                  />
-                )}
+                <SuperlineasSelector
+                  superlineas={superlineas}
+                  superLineaId={watch("superLineaId")}
+                  disabled={isSubmitting}
+                  loading={superlineasLoading}
+                  error={errors.superLineaId?.message ?? superlineasError}
+                  onChange={(superLinea) =>
+                    setValue("superLineaId", superLinea?.id, { shouldValidate: true })
+                  }
+                  onAgregar={() => setMostrarFormularioSuperlinea(true)}
+                />
 
                 <div className="flex items-end gap-2 lg:col-span-1">
                   <label className="flex items-center pb-2">
@@ -220,7 +222,7 @@ export default function RegistrarActualizarLineaForm({
               <CardFooter className="flex justify-center">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || (!linea && (superlineasLoading || superlineas.length === 0))}
+                  disabled={isSubmitting || superlineasLoading || superlineas.length === 0 || Boolean(superlineasError)}
                   className="btn btn-dark"
                 >
                   {isSubmitting ? (linea ? "Actualizando..." : "Registrando...") : linea ? "Actualizar" : "Registrar"}

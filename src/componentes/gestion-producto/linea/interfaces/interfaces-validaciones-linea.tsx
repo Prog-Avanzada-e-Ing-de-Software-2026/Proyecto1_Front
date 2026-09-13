@@ -56,5 +56,6 @@ export const transformData = (linea: Linea): FormValues => {
     observacion: linea.observacion ?? null,
     stockMinimo: linea.stockMinimo ?? 0,
     utilizaStockMinimo: linea.utilizaStockMinimo ?? false,
+    superLineaId: linea.superLinea?.id ?? linea.superlinea?.id,
   };
 };
