@@ -2,7 +2,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Select an active SuperLínea for Línea creation and optional edit reassignment
+### Requirement: Select an active SuperLínea for Línea creation
 
 In Línea create mode, the system MUST load active options from `/api/superlinea/select`, require `superLineaId`, and preserve the existing creation flow. In edit mode, it MUST initialize the current association and send `superLineaId` only when the user changes it; omission MUST preserve the association. The frontend MUST NOT invent active filtering.
 (Previously: SuperLínea selection was required only during Línea creation and edit behavior was explicitly excluded.)

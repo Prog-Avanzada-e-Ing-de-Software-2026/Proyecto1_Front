@@ -2,7 +2,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Create SuperLínea from Línea creation or standalone management
+### Requirement: Create SuperLínea from Línea creation
 
 The system MUST preserve nested creation from Línea with required `denominacion` and optional `observacion`, and MUST additionally permit standalone creation through `POST /api/superlinea` with `usuarioCreatedId`. It MUST normalize API errors without assuming undocumented response shapes.
 (Previously: Creation was available only through the nested Línea flow.)

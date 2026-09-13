@@ -8,60 +8,50 @@ Require an active SuperLínea association when creating a Línea from Producto.
 
 ### Requirement: Select an active SuperLínea for Línea creation
 
-In Línea create mode, the system MUST load options from the documented `/api/superlinea/select` contract, present the returned active options, and require the selected option's identifier as `superLineaId`. The frontend MUST NOT invent additional client-side active filtering beyond that endpoint contract.
+In Línea create mode, the system MUST load active options from `/api/superlinea/select`, require `superLineaId`, and preserve the existing creation flow. In edit mode, it MUST initialize the current association and send `superLineaId` only when the user changes it; omission MUST preserve the association. The frontend MUST NOT invent active filtering.
+(Previously: SuperLínea selection was required only during Línea creation and edit behavior was explicitly excluded.)
 
 #### Scenario: Required selection and payload
-
 - GIVEN the selector has available active options
 - WHEN the user selects one and submits a valid Línea
-- THEN the system MUST submit its identifier as `superLineaId`
-- AND MUST preserve the existing Línea creation fields and success flow
+- THEN the system MUST submit its identifier as `superLineaId` and preserve existing fields and success flow
 
-#### Scenario: Missing selection blocks submission
+#### Scenario: Missing selection or empty catalog
+- GIVEN no valid option is selected, or the select endpoint returns no options
+- WHEN the user submits or views creation
+- THEN the system MUST identify the required association, explain that a SuperLínea must be registered first, and MUST NOT send the request
 
-- GIVEN the Línea creation form has no selected SuperLínea
-- WHEN the user attempts to submit
-- THEN the system MUST block submission and identify the SuperLínea association as required
-- AND MUST NOT send a Línea creation request
+#### Scenario: Edit unchanged association
+- GIVEN edit mode displays the Línea's current SuperLínea
+- WHEN the user saves without changing it
+- THEN the system MUST omit `superLineaId` and the backend-preserved association MUST remain unchanged
 
-#### Scenario: Empty catalog
-
-- GIVEN the select endpoint returns no available options
-- WHEN the Línea creation form is displayed
-- THEN the system MUST explain in established Spanish domain language that primero debe registrarse una SuperLínea
-- AND MUST block Línea submission until a valid option is available
-
-#### Scenario: Catalog loading error
-
-- GIVEN the SuperLínea options request fails
-- WHEN the Línea creation form attempts to load options
-- THEN the system MUST display a normalized actionable API error
-- AND MUST keep Línea submission blocked while no valid option is selected
+#### Scenario: Edit reassignment and failures
+- GIVEN the user selects another active SuperLínea
+- WHEN the update succeeds, or returns 403 or 404
+- THEN the system MUST send the new identifier only on change and show success, protected-record, or missing-association error respectively
 
 ### Requirement: Preserve nested Línea flow and parent state
 
 The SuperLínea selector and nested `+` action MUST remain within the existing Producto → Línea creation flow.
+(Previously: The selector and nested action were confined to the creation flow.)
 
 #### Scenario: Parent state and cancellation
-
-- GIVEN the Producto form and Línea create form contain entered values
-- WHEN the user opens and cancels the nested SuperLínea flow
-- THEN both parent forms MUST preserve their entered state
-- AND existing confirmation behavior MUST remain available
+- GIVEN Producto and Línea forms contain values
+- WHEN the nested flow is opened and cancelled
+- THEN both parent forms MUST preserve values and confirmation behavior
 
 #### Scenario: Línea success feedback and refresh
-
-- GIVEN a Línea is created with a selected `superLineaId`
+- GIVEN a Línea is created with `superLineaId`
 - WHEN the backend confirms creation
-- THEN the existing success feedback MUST be shown
-- AND the parent Línea options MUST refresh without changing Producto navigation or auto-selecting a newly created item
+- THEN success feedback MUST appear and options MUST refresh without changing navigation or auto-selecting
 
-### Requirement: Create-only isolation
+### Requirement: Association errors are actionable
 
-CR-003 MUST NOT modify Línea edit behavior or introduce broader SuperLínea CRUD or management entry points.
+The system MUST display a normalized actionable API error when loading or updating the association fails.
 
-#### Scenario: Edit remains outside scope
+#### Scenario: Loading failure
+- GIVEN the select request fails
+- WHEN edit or create attempts to load options
+- THEN submission MUST remain blocked without a valid option and the error MUST be shown
 
-- GIVEN a user edits an existing Línea
-- WHEN the edit form is used
-- THEN no CR-003 SuperLínea selection requirement MUST be introduced

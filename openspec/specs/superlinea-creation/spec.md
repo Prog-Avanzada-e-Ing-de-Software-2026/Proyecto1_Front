@@ -8,58 +8,36 @@ Define nested SuperLínea registration available only from Línea creation.
 
 ### Requirement: Create SuperLínea from Línea creation
 
-The system MUST provide a nested creation flow with required `denominacion` and optional `observacion`, using the documented SuperLínea create contract and existing API-error parsing tolerance.
+The system MUST preserve nested creation from Línea with required `denominacion` and optional `observacion`, and MUST additionally permit standalone creation through `POST /api/superlinea` with `usuarioCreatedId`. It MUST normalize API errors without assuming undocumented response shapes.
+(Previously: Creation was available only through the nested Línea flow.)
 
-#### Scenario: Valid SuperLínea creation
+#### Scenario: Valid nested or standalone creation
+- GIVEN the user submits a non-empty denomination and authenticated creator identifier
+- WHEN creation is submitted from either entry point
+- THEN the documented endpoint MUST be called and success feedback MUST be shown
 
-- GIVEN the user is creating a Línea and opens the adjacent `+` action
-- WHEN the user submits a non-empty denomination with an optional observation
-- THEN the system MUST create the SuperLínea through the documented endpoint
-- AND MUST show success feedback in established Spanish domain language
+#### Scenario: Required denomination boundary
+- GIVEN the creation form is open
+- WHEN the user submits without a denomination or beyond the documented 255-character maximum
+- THEN submission MUST be blocked and the invalid field MUST be identified
 
-#### Scenario: Required denomination validation
-
-- GIVEN the nested SuperLínea form is open
-- WHEN the user submits without a denomination
-- THEN the system MUST block submission and identify `denominacion` as required
-
-#### Scenario: Duplicate denomination delegated to backend
-
-- GIVEN the backend rejects a duplicate denomination
-- WHEN the nested creation request fails
-- THEN the system MUST display the normalized backend error to the user
-- AND MUST NOT assume an undocumented status, error code, or response-body shape
+#### Scenario: API failures
+- GIVEN creation returns 400, 401, 403, or 409
+- WHEN the response is received
+- THEN the normalized error MUST be displayed and the form MUST remain available
 
 #### Scenario: Cancellation preserves parent state
-
-- GIVEN the Línea form contains entered values and the nested SuperLínea form is open
-- WHEN the user cancels and confirms cancellation
-- THEN the nested form MUST close without submitting
-- AND the Línea form values MUST remain unchanged
-
-#### Scenario: Nested API failure
-
-- GIVEN the SuperLínea creation request fails for any other tolerated API error
-- WHEN the error is received
-- THEN the system MUST display the normalized error and keep both the parent form and nested flow available
+- GIVEN the nested form is open over a Línea form with values
+- WHEN the user confirms cancellation
+- THEN the nested form MUST close without submitting and Línea values MUST remain unchanged
 
 ### Requirement: Refresh options without automatic selection
 
-After successful creation, the system MUST refresh the available SuperLínea options and MUST NOT automatically assign the new option to the Línea form.
+After successful nested creation, the system MUST refresh active options and MUST NOT assign the new option automatically.
+(Previously: This behavior applied to the nested create-only flow.)
 
 #### Scenario: Successful refresh
-
-- GIVEN a SuperLínea was created successfully
+- GIVEN a nested SuperLínea was created successfully
 - WHEN the nested flow completes
-- THEN the system MUST refresh the selector options
-- AND MUST leave `superLineaId` unselected until the user explicitly selects an option
+- THEN options MUST refresh and `superLineaId` MUST remain unselected until explicit selection
 
-### Requirement: Create-only isolation
-
-The system MUST NOT add or alter SuperLínea edit, delete, consultation, or standalone management behavior, and MUST NOT change Línea edit behavior.
-
-#### Scenario: Existing edit flow is unchanged
-
-- GIVEN the user opens Línea edit mode
-- WHEN the edit form is rendered or submitted
-- THEN CR-003 create-only SuperLínea behavior MUST NOT be applied
