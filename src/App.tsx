@@ -16,7 +16,7 @@ import ConsultarSuperlineas from "./componentes/gestion-producto/superlinea/util
 
 import PrivateRoute from "./utils/PrivateRoute";
 import { Rol } from "./interfaces/generales/interfaces-generales";
-import CambioPreciosMasivo from "./componentes/gestion-producto/precios/cambio-precios-masivo/util/cambio-precios-masivo";
+import ActualizacionMasivaPrecios from "./componentes/gestion-producto/precios/actualizacion-masiva-precios/actualizacion-masiva-precios";
 import DashboardHome from "./pages/dashboard-home";
 
 import ListaPrecios from "./componentes/gestion-producto/precios/lista_precios/util/lista-precios";
@@ -49,7 +49,9 @@ function App() {
               <Route path="cliente" element={<ConsultarCliente />} />
               <Route path="proveedor" element={<ConsultarProveedores />} />
               <Route path="personal" element={<ConsultarPersonal />} />
-              <Route path="cambio-precios-masivo" element={<CambioPreciosMasivo />} />
+              <Route element={<PrivateRoute allowedRoles={[Rol.ROOT, Rol.ADMINISTRADOR, Rol.EMPLEADO]} />}>
+                <Route path="cambio-precios-masivo" element={<ActualizacionMasivaPrecios />} />
+              </Route>
               <Route path="lista-precios" element={<ListaPrecios />} />
               <Route path="localidad" element={<ConsultarLocalidad />} />
               <Route path="condicion-iva" element={<CondicionIva />} />     
