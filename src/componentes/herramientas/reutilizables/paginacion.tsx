@@ -17,7 +17,7 @@ export const Takes = {
   100: 100,
 };
 
-export default function Paginacion({ entidadesTotales, take, paginaActual, onChange }: PaginacionProps) {
+export default function Paginacion({ entidadesTotales, take, paginaActual, onChange }: Readonly<PaginacionProps>) {
   const totalPaginas = Math.ceil(entidadesTotales / take);
 
   if (totalPaginas <= 1) return null;
@@ -71,6 +71,8 @@ export default function Paginacion({ entidadesTotales, take, paginaActual, onCha
             }}
             className="text-black"
             menuPortalTarget={document.body}
+            menuPlacement="top"
+            menuPosition="fixed"
             styles={{
               control: (base) => ({
                 ...base,
