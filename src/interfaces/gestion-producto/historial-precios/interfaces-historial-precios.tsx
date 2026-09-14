@@ -1,3 +1,21 @@
+export const MotivoCambioPrecio = {
+  ActualizacionDeCosto: "ActualizacionDeCosto",
+  ActualizacionDeMargen: "ActualizacionDeMargen",
+  ActualizacionDePrecioPorLinea: "ActualizacionDePrecioPorLinea",
+  ActualizacionDePrecioGlobal: "ActualizacionDePrecioGlobal",
+  ActualizacionDePrecioDirecta: "ActualizacionDePrecioDirecta",
+} as const;
+
+export type MotivoCambioPrecio =
+  (typeof MotivoCambioPrecio)[keyof typeof MotivoCambioPrecio];
+
+export interface CambioPrecioDto {
+  fecha: string;
+  precioAnterior: number;
+  precioNuevo: number;
+  motivo: MotivoCambioPrecio;
+}
+
 export interface HistorialPrecios {
   id: number;
   precioCliente: number;
