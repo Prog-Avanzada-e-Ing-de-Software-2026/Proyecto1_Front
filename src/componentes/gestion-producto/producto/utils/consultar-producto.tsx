@@ -3,7 +3,7 @@ import { Info, Pencil, Trash, Box, CircleDollarSign, Shuffle, Star } from "lucid
 import { Button } from "../../../ui/Button";
 import ProductoService from "../services/producto-service";
 import { formatCantidades, formatPrice } from "../../../herramientas/formateo-de-campos/fucion-formateo";
-import { ConsultarProducto, Producto } from "../../../../interfaces/gestion-producto/producto/interfaces-producto";
+import { ConsultarProducto, Producto, ProductoListResponse } from "../../../../interfaces/gestion-producto/producto/interfaces-producto";
 import { TablaAGGrid, Column } from "../../../herramientas/tablas/tabla-flexible-ag-grid";
 import { jwtDecode } from "jwt-decode";
 import Paginacion from "../../../herramientas/reutilizables/paginacion";
@@ -31,8 +31,17 @@ import { DatosCard } from "../componentes/datos-card";
 import { NotificacionModal } from "../../../NotificacionModal/modales/NotificacionModal";
 import { ProductoNotificacion, EntidadTipo } from "../../../NotificacionModal/interfaces/notificacion.types";
 import { getRoles, getUsuarioId } from "../../../../utils/auth";
-import { puedeHacerAcciones } from "../domain/permisos-producto";
+import { puedeBuscarPorDenominacion, puedeBuscarPorSeleccion, puedeHacerAcciones } from "../domain/permisos-producto";
+import LineaService from "../../linea/services/linea-service";
+import SuperLineaService from "../../superlinea/services/superlinea-service";
+import { SelectLinea } from "../../../../interfaces/gestion-producto/linea/interfaces-linea";
+import { SelectSuperlinea } from "../../../../interfaces/gestion-producto/superlinea/interfaces-superlinea";
+import BusquedaProducto, { ModoBusqueda } from "../componentes/busqueda-producto";
 
+type CriterioBusqueda =
+  | { tipo: "denominacion"; valor: string }
+  | { tipo: "linea"; lineaId: number }
+  | { tipo: "superlinea"; superLineaId: number };
 
 export default function ConsultarProductos() {
   const [productos, setProductos] = useState<ConsultarProducto[]>([]);
@@ -57,6 +66,31 @@ export default function ConsultarProductos() {
   const [auditoria, setAuditoria] = useState<Auditoria>({} as Auditoria);
   const isMounted = useRef(false);
   const inicializacionCompleta = useRef(false);
+
+  // =========================
+  // BÚSQUEDA PARCIAL (CR-004)
+  // =========================
+  const roles = getRoles();
+  const permitidoBuscarPorDenominacion = puedeBuscarPorDenominacion(roles);
+  const permitidoBuscarPorSeleccion = puedeBuscarPorSeleccion(roles);
+
+  const [modoBusqueda, setModoBusqueda] = useState<ModoBusqueda | null>(
+    permitidoBuscarPorDenominacion ? "denominacion" : null,
+  );
+  const [criterioBusqueda, setCriterioBusqueda] = useState<CriterioBusqueda | null>(null);
+  const [terminoDenominacion, setTerminoDenominacion] = useState("");
+  const [terminoLinea, setTerminoLinea] = useState("");
+  const [opcionesLinea, setOpcionesLinea] = useState<SelectLinea[]>([]);
+  const [lineaSeleccionada, setLineaSeleccionada] = useState<SelectLinea | null>(null);
+  const [terminoSuperlinea, setTerminoSuperlinea] = useState("");
+  const [opcionesSuperlinea, setOpcionesSuperlinea] = useState<SelectSuperlinea[]>([]);
+  const [superlineaSeleccionada, setSuperlineaSeleccionada] = useState<SelectSuperlinea | null>(null);
+
+  // Reflejo en ref para que el efecto de búsqueda rápida no dependa del estado
+  // de búsqueda parcial (evita refetch por keystroke).
+  const modoBusquedaRef = useRef<ModoBusqueda | null>(modoBusqueda);
+  modoBusquedaRef.current = modoBusqueda;
+
 
   
    // =========================
@@ -115,6 +149,9 @@ export default function ConsultarProductos() {
 
   useEffect(() => {
     if (!inicializacionCompleta.current) return;
+    // Búsqueda parcial activa: la búsqueda rápida por código queda neutralizada
+    // (solo Enter dispara búsquedas). Con modoBusqueda null manda el flujo legacy.
+    if (modoBusquedaRef.current !== null) return;
     const timer = setTimeout(() => {
       handleBuscarProductosRapido();
     }, 400);
@@ -123,6 +160,9 @@ export default function ConsultarProductos() {
 
   useEffect(() => {
     if (buscar.cont > 0 && buscar.componente === "consultar-producto") {
+      // El buscador de la sidebar recupera el listado: salir del modo CR-004.
+      setModoBusqueda(null);
+      setCriterioBusqueda(null);
       handleBuscarProductos(true);
     }
   }, [buscar]);
@@ -440,13 +480,155 @@ export default function ConsultarProductos() {
     setLoading(false);
   };
 
+  // BÚSQUEDA PARCIAL (CR-004) =======================================
+
+  // Enruta la búsqueda al servicio del modo activo. Un término vacío o solo
+  // espacios devuelve resultado vacío sin emitir request.
+  const ejecutarBusquedaActiva = async () => {
+    const criterio = criterioBusqueda;
+    if (!criterio) return;
+
+    const skipActual = skip;
+    const takeActual = take;
+
+    setLoading(true);
+    try {
+      if (criterio.tipo === "denominacion" && criterio.valor.trim() === "") {
+        setProductos([]);
+        setEntidadesTotales(0);
+        return;
+      }
+
+      let productosBuscados: ProductoListResponse;
+
+      if (criterio.tipo === "denominacion") {
+        productosBuscados = await ProductoService.buscarPorDenominacion({
+          denominacion: criterio.valor,
+          skip: skipActual,
+          take: takeActual,
+        });
+      } else if (criterio.tipo === "linea") {
+        productosBuscados = await ProductoService.obtener({
+          lineaId: criterio.lineaId,
+          skip: skipActual,
+          take: takeActual,
+        });
+      } else {
+        productosBuscados = await ProductoService.buscarPorSuperlinea({
+          superLineaId: criterio.superLineaId,
+          skip: skipActual,
+          take: takeActual,
+        });
+      }
+
+      setProductos(productosBuscados.data);
+      setEntidadesTotales(productosBuscados.total);
+    } catch (err: any) {
+      // No se toca el estado `error` de página: reemplazaría el listado completo.
+      console.error("Error al buscar productos:", err);
+      addAlert({
+        type: TipoAlerta.ERROR,
+        title: TituloAlerta.ERROR,
+        message: "No se pudieron buscar los productos.",
+        autoClose: true,
+        duration: 3000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const ejecutarBusquedaActivaRef = useRef(ejecutarBusquedaActiva);
+  ejecutarBusquedaActivaRef.current = ejecutarBusquedaActiva;
+
+  const handleCambiarModo = (modo: ModoBusqueda) => {
+    setModoBusqueda(modo);
+    setCriterioBusqueda(null);
+    setProductos([]);
+    setEntidadesTotales(0);
+    resetearPaginacion();
+  };
+
+  const handleBuscarPorDenominacion = () => {
+    const criterio: CriterioBusqueda = { tipo: "denominacion", valor: terminoDenominacion };
+    setCriterioBusqueda(criterio);
+    resetearPaginacion();
+  };
+
+  const handleBuscarLineas = async () => {
+    try {
+      const opciones = await LineaService.buscarSelect(terminoLinea);
+      setOpcionesLinea(opciones);
+    } catch (err: any) {
+      console.error("Error al buscar Líneas:", err);
+      addAlert({
+        type: TipoAlerta.ERROR,
+        title: TituloAlerta.ERROR,
+        message: "No se pudieron buscar las Líneas.",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleSeleccionarLinea = (linea: SelectLinea | null) => {
+    setLineaSeleccionada(linea);
+    if (!linea) {
+      setCriterioBusqueda(null);
+      setProductos([]);
+      setEntidadesTotales(0);
+      return;
+    }
+    const criterio: CriterioBusqueda = { tipo: "linea", lineaId: linea.id };
+    setCriterioBusqueda(criterio);
+    resetearPaginacion();
+  };
+
+  const handleBuscarSuperlineas = async () => {
+    try {
+      const opciones = await SuperLineaService.obtenerSelect(terminoSuperlinea);
+      setOpcionesSuperlinea(opciones);
+    } catch (err: any) {
+      console.error("Error al buscar SuperLíneas:", err);
+      addAlert({
+        type: TipoAlerta.ERROR,
+        title: TituloAlerta.ERROR,
+        message: "No se pudieron buscar las SuperLíneas.",
+        autoClose: true,
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleSeleccionarSuperlinea = (superlinea: SelectSuperlinea | null) => {
+    setSuperlineaSeleccionada(superlinea);
+    if (!superlinea) {
+      setCriterioBusqueda(null);
+      setProductos([]);
+      setEntidadesTotales(0);
+      return;
+    }
+    const criterio: CriterioBusqueda = { tipo: "superlinea", superLineaId: superlinea.id };
+    setCriterioBusqueda(criterio);
+    resetearPaginacion();
+  };
+
   // MANEJO DE PAGINACION ===========================================
 
   useEffect(() => {
-    if (filtrosInicializados === true) {
+    if (!filtrosInicializados) return;
+    if (criterioBusqueda) {
+      // Criterio confirmado (Enter/selección) o cambio de página: un único request.
+      ejecutarBusquedaActivaRef.current();
+    } else if (modoBusqueda === null) {
+      // Sin modo CR activo: mandan los flujos legacy (búsqueda rápida/sidebar).
       handleBuscarProductos();
+    } else {
+      // Modo CR activo pero sin criterio todavía: limpiar, sin request.
+      setProductos([]);
+      setEntidadesTotales(0);
     }
-  }, [paginaActual, filtrosInicializados, take]);
+  }, [criterioBusqueda, modoBusqueda, paginaActual, filtrosInicializados, take, setEntidadesTotales]);
 
   // MANEJO DE PAGINACION ===========================================
 
@@ -546,6 +728,29 @@ export default function ConsultarProductos() {
               </div>
 
               <CardContent className="p-0">
+                {(permitidoBuscarPorDenominacion || permitidoBuscarPorSeleccion) && (
+                  <BusquedaProducto
+                    puedeBuscarPorDenominacion={permitidoBuscarPorDenominacion}
+                    puedeBuscarPorSeleccion={permitidoBuscarPorSeleccion}
+                    modoBusqueda={modoBusqueda}
+                    onCambiarModo={handleCambiarModo}
+                    terminoDenominacion={terminoDenominacion}
+                    onCambiarTerminoDenominacion={setTerminoDenominacion}
+                    onBuscarDenominacion={handleBuscarPorDenominacion}
+                    terminoLinea={terminoLinea}
+                    onCambiarTerminoLinea={setTerminoLinea}
+                    onBuscarLineas={handleBuscarLineas}
+                    opcionesLinea={opcionesLinea}
+                    lineaSeleccionada={lineaSeleccionada}
+                    onSeleccionarLinea={handleSeleccionarLinea}
+                    terminoSuperlinea={terminoSuperlinea}
+                    onCambiarTerminoSuperlinea={setTerminoSuperlinea}
+                    onBuscarSuperlineas={handleBuscarSuperlineas}
+                    opcionesSuperlinea={opcionesSuperlinea}
+                    superlineaSeleccionada={superlineaSeleccionada}
+                    onSeleccionarSuperlinea={handleSeleccionarSuperlinea}
+                  />
+                )}
                 <FiltrosAplicados />
                 <DatosTabla
                   productos={productos}
