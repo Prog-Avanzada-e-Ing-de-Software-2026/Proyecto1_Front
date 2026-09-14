@@ -13,7 +13,10 @@ const baseService = createCrudService<FormValues>("producto");
 const ProductoService = {
   ...baseService,
 
-  
+  obtenerHistorialPrecios: async (id: number, skip = 0, take = 10) => {
+    return ApiService.get(`/producto/${id}/historial-precios`, { skip, take });
+  },
+
   obtenerMobile: async (filtros: any) => {
     try {
       const token = localStorage.getItem("Token");
