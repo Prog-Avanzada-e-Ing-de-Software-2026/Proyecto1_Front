@@ -25,7 +25,7 @@ projects:
       formatter: ""
 
 testing:
-  detected_at: "2026-09-08"
+  detected_at: "2026-09-13"
   strict_tdd: false
   workspace_test_command: ""
   reason: "No explicit workspace-level test command covers the discovered project."

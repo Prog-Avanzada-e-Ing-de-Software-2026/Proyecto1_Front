@@ -1,0 +1,28 @@
+schemaName: gentle-ai.sdd-preproposal
+schemaVersion: 1
+revision: 2
+change: 2026-09-13-CR-004
+exploration:
+  outcome: done
+  reference:
+    openspec: openspec/changes/2026-09-13-CR-004/exploration.md
+    engram: sdd/2026-09-13-CR-004/explore
+research:
+  offer: presented
+  recommendation: not-warranted
+  request: []
+  classes: []
+  admission: {}
+  outcome: not-selected
+  rationale: "The backend contract is fully derivable from the archived backend change artifacts plus source; no external or library research is required. react-select is already a project dependency."
+productDecisions:
+  status: confirmed
+  decidedAt: "2026-09-13"
+  items:
+    - target-surface: "Enhance the existing ConsultarProductos page (src/componentes/gestion-producto/producto/utils/consultar-producto.tsx) — no new route, menu entry, or guard."
+    - search-mode-composition: "The three search modes are mutually exclusive: one active mode drives the result list and pagination state at a time."
+  resolvedByEvidence:
+    - hu2-products-contract: "GET /api/producto/search-by?lineaId&skip&take -> {data,total}; satisfies HU-2 (products of a selected línea need no text matching; active-only is enforced in persistence)"
+    - total-semantics: "backend `total` maps 1:1 to `entidadesTotales` consumed by the shared Paginacion component"
+    - superlinea-select-shape: "GET /api/superlinea/select now returns SelectOption[] (codigo/nombre/descripcion); the frontend parser must adapt"
+proposalReady: true
