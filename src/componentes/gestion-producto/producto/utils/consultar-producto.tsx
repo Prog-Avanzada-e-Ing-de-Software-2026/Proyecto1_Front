@@ -43,6 +43,16 @@ type CriterioBusqueda =
   | { tipo: "linea"; lineaId: number }
   | { tipo: "superlinea"; superLineaId: number };
 
+// CR-004 A3: shared singular/plural phrase builder for search feedback, used by
+// all three modes so the wording is never duplicated. A count of 0 renders the
+// explicit no-results variant.
+const fraseResultadosBusqueda = (cantidad: number, singular: string, plural: string, termino: string): string => {
+  if (cantidad === 0) return `No se encontraron ${plural} para «${termino}».`;
+  return cantidad === 1
+    ? `Se encontró 1 ${singular} para «${termino}».`
+    : `Se encontraron ${cantidad} ${plural} para «${termino}».`;
+};
+
 export default function ConsultarProductos() {
   const [productos, setProductos] = useState<ConsultarProducto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -90,6 +100,11 @@ export default function ConsultarProductos() {
   // de búsqueda parcial (evita refetch por keystroke).
   const modoBusquedaRef = useRef<ModoBusqueda | null>(modoBusqueda);
   modoBusquedaRef.current = modoBusqueda;
+
+  // CR-004 A4: one-shot feedback flag armed ONLY by the denominación Enter
+  // commit and consumed at fetch start, so page-change re-runs, selections,
+  // mode switches and entry never toast.
+  const pendienteFeedbackRef = useRef(false);
 
 
   
@@ -482,9 +497,36 @@ export default function ConsultarProductos() {
 
   // BÚSQUEDA PARCIAL (CR-004) =======================================
 
+  // CR-004 A3: feedback toasts are transient (autoClose 3000) and never touch
+  // list state. WARNING marks "nothing found / input needed"; INFO reports counts.
+  const avisarTerminoVacio = () => {
+    addAlert({
+      type: TipoAlerta.WARNING,
+      title: TituloAlerta.WARNING,
+      message: "Escribe un término para buscar.",
+      autoClose: true,
+      duration: 3000,
+    });
+  };
+
+  const avisarResultados = (cantidad: number, singular: string, plural: string, termino: string) => {
+    addAlert({
+      type: cantidad === 0 ? TipoAlerta.WARNING : TipoAlerta.INFO,
+      title: cantidad === 0 ? TituloAlerta.WARNING : TituloAlerta.INFO,
+      message: fraseResultadosBusqueda(cantidad, singular, plural, termino),
+      autoClose: true,
+      duration: 3000,
+    });
+  };
+
   // Enruta la búsqueda al servicio del modo activo. Un término vacío o solo
   // espacios devuelve resultado vacío sin emitir request.
   const ejecutarBusquedaActiva = async () => {
+    // CR-004 A4: consume the one-shot flag at fetch start so only the fetch
+    // triggered by Enter reports feedback; page-change re-runs stay silent.
+    const feedbackPendiente = pendienteFeedbackRef.current;
+    pendienteFeedbackRef.current = false;
+
     const criterio = criterioBusqueda;
     if (!criterio) return;
 
@@ -494,6 +536,8 @@ export default function ConsultarProductos() {
     setLoading(true);
     try {
       if (criterio.tipo === "denominacion" && criterio.valor.trim() === "") {
+        // CR-004 A3: blank-term hint on the Enter path; no request is issued.
+        if (feedbackPendiente) avisarTerminoVacio();
         setProductos([]);
         setEntidadesTotales(0);
         return;
@@ -523,6 +567,13 @@ export default function ConsultarProductos() {
 
       setProductos(productosBuscados.data);
       setEntidadesTotales(productosBuscados.total);
+
+      // CR-004 A3/A4: the denominación count fires ONLY after success and ONLY
+      // when Enter armed the one-shot flag; a failed search keeps just the
+      // existing ERROR below (count and error never co-fire).
+      if (feedbackPendiente && criterio.tipo === "denominacion") {
+        avisarResultados(productosBuscados.total, "producto", "productos", criterio.valor.trim());
+      }
     } catch (err: any) {
       // No se toca el estado `error` de página: reemplazaría el listado completo.
       console.error("Error al buscar productos:", err);
@@ -550,15 +601,26 @@ export default function ConsultarProductos() {
   };
 
   const handleBuscarPorDenominacion = () => {
+    // CR-004 A4: only the Enter commit arms the one-shot feedback flag.
+    pendienteFeedbackRef.current = true;
     const criterio: CriterioBusqueda = { tipo: "denominacion", valor: terminoDenominacion };
     setCriterioBusqueda(criterio);
     resetearPaginacion();
   };
 
   const handleBuscarLineas = async () => {
+    const termino = terminoLinea.trim();
+    if (termino === "") {
+      // CR-004 A3: blank/whitespace term → hint toast, options cleared, NO request.
+      setOpcionesLinea([]);
+      avisarTerminoVacio();
+      return;
+    }
     try {
       const opciones = await LineaService.buscarSelect(terminoLinea);
       setOpcionesLinea(opciones);
+      // CR-004 A3: option count fires only after success (WARNING when 0).
+      avisarResultados(opciones.length, "Línea", "Líneas", termino);
     } catch (err: any) {
       console.error("Error al buscar Líneas:", err);
       addAlert({
@@ -585,9 +647,18 @@ export default function ConsultarProductos() {
   };
 
   const handleBuscarSuperlineas = async () => {
+    const termino = terminoSuperlinea.trim();
+    if (termino === "") {
+      // CR-004 A3: blank/whitespace term → hint toast, options cleared, NO request.
+      setOpcionesSuperlinea([]);
+      avisarTerminoVacio();
+      return;
+    }
     try {
       const opciones = await SuperLineaService.obtenerSelect(terminoSuperlinea);
       setOpcionesSuperlinea(opciones);
+      // CR-004 A3: option count fires only after success (WARNING when 0).
+      avisarResultados(opciones.length, "SuperLínea", "SuperLíneas", termino);
     } catch (err: any) {
       console.error("Error al buscar SuperLíneas:", err);
       addAlert({
