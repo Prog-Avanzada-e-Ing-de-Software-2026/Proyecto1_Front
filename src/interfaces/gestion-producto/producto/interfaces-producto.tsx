@@ -86,6 +86,22 @@ export interface ConsultarProducto {
   precioOfertaConIva: number;
 }
 
+export interface ProductoListResponse {
+  data: ConsultarProducto[];
+  total: number;
+}
+
+export interface BusquedaProductoPorDenominacionParams {
+  denominacion: string;
+  skip: number;
+  take: number;
+}
+
+export interface BusquedaProductoPorSuperlineaParams {
+  superLineaId: number;
+  skip: number;
+  take: number;
+}
 
 export interface ConsultarProductosCambioPreciosMasivo {
   id: number;
