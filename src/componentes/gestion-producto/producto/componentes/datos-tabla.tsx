@@ -1,16 +1,16 @@
 import { Column, TablaAGGrid } from "../../../herramientas/tablas/tabla-flexible-ag-grid";
-import { ConsultarProducto, Producto} from "../../../../interfaces/gestion-producto/producto/interfaces-producto";
-import { ActionButton } from "../../../herramientas/reutilizables/action-button";
-import { Info, Pencil, Trash } from "lucide-react";
+import { ConsultarProducto } from "../../../../interfaces/gestion-producto/producto/interfaces-producto";
 import { ProductoActions } from "./producto-action";
 
 interface Props {
   productos: ConsultarProducto[];
   columns: Column<ConsultarProducto>[];
   puedeAccionar: boolean;
+  puedeVerHistorialPrecios?: boolean;
   onEditar: (id: number) => void;
   onInfo: (id: number) => void;
   onDelete: (id: number) => void;
+  onHistorial: (id: number, denominacion: string) => void;
   
 }
 
@@ -18,10 +18,11 @@ export function DatosTabla({
   productos,
   columns,
   puedeAccionar,
+  puedeVerHistorialPrecios = false,
   onEditar,
   onInfo,
   onDelete,
-  ...actions
+  onHistorial,
 }: Props) {
   return (
     <div className="hidden lg:block overflow-x-auto">
@@ -29,13 +30,16 @@ export function DatosTabla({
         columns={columns}
         data={productos}
         actions={
-          puedeAccionar
+          puedeAccionar || puedeVerHistorialPrecios
             ? (row) => (
                 <ProductoActions
                   producto={row}
                   onEditar={onEditar}
                   onInfo={onInfo}
                   onDelete={onDelete}
+                  onHistorial={onHistorial}
+                  puedeAccionar={puedeAccionar}
+                  puedeVerHistorialPrecios={puedeVerHistorialPrecios}
                 />
               )
             : undefined

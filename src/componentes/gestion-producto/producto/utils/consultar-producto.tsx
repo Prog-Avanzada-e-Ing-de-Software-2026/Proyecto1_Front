@@ -31,6 +31,8 @@ import { DatosCard } from "../componentes/datos-card";
 import { NotificacionModal } from "../../../NotificacionModal/modales/NotificacionModal";
 import { ProductoNotificacion, EntidadTipo } from "../../../NotificacionModal/interfaces/notificacion.types";
 import { getRoles, getUsuarioId } from "../../../../utils/auth";
+import { puedeHacerAcciones, puedeVerHistorialPrecios } from "../domain/permisos-producto";
+
 import { puedeBuscarPorDenominacion, puedeBuscarPorSeleccion, puedeHacerAcciones } from "../domain/permisos-producto";
 import LineaService from "../../linea/services/linea-service";
 import SuperLineaService from "../../superlinea/services/superlinea-service";
@@ -343,10 +345,9 @@ export default function ConsultarProductos() {
     setProductoInfo({} as Producto);
   };
 
-  const handleMostrarHistorialPrecios = async (id: number) => {
+  const handleMostrarHistorialPrecios = (id: number, denominacion?: string) => {
     if (id) {
-      const producto = await ProductoService.obtenerId(id);
-      setProductoInfo(producto);
+      setProductoInfo({ id, denominacion: denominacion || "" } as Producto);
       setMostrarHistorialPrecios(true);
     }
   };
@@ -360,8 +361,6 @@ export default function ConsultarProductos() {
   };
 
   const handleCerrarHistorialPrecios = () => {
-    setBuscar({ cont: 0, componente: "consultar-producto" });
-    limpiarFiltros();
     setMostrarHistorialPrecios(false);
     setProductoInfo({} as Producto);
   };
@@ -827,13 +826,11 @@ export default function ConsultarProductos() {
                   productos={productos}
                   columns={columns}
                   puedeAccionar={puedeHacerAcciones(getRoles())}
+                  puedeVerHistorialPrecios={puedeVerHistorialPrecios(getRoles())}
                   onEditar={handleAbrirActualizarProducto}
                   onInfo={handleMostrarInfo}
                   onDelete={handleDelete}
-                  onMovimientos={handleMostrarMovimientosStock}
-                  onCambioPrecios={handleMostrarCambioPrecios}
                   onHistorial={handleMostrarHistorialPrecios}
-                  onNotificar={handleNotificar}
                 />
                   
                 <div className="lg:hidden space-y-3">

@@ -18,6 +18,10 @@ const baseService = createCrudService<FormValues>("producto");
 const ProductoService = {
   ...baseService,
 
+  obtenerHistorialPrecios: async (id: number, skip = 0, take = 10) => {
+    return ApiService.get(`/producto/${id}/historial-precios`, { skip, take });
+  },
+
   buscarPorDenominacion: (p: BusquedaProductoPorDenominacionParams) =>
     ApiService.get("/producto/search-by-denominacion", p) as Promise<ProductoListResponse>,
 
