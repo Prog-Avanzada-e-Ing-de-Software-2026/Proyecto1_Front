@@ -13,31 +13,23 @@ const contractError = (message: string) => ({
   response: { data: { message } },
 });
 
-const isListResponse = (response: unknown): response is SuperLineaListResponseDto => {
-  if (!response || typeof response !== "object") return false;
-
-  const { data, total } = response as SuperLineaListResponseDto;
-
-  return (
-    Array.isArray(data) &&
-    typeof total === "number" &&
-    data.every(
-      (superLinea) =>
-        typeof superLinea?.id === "number" &&
-        typeof superLinea?.denominacion === "string",
-    )
+const isSelectResponse = (response: unknown): response is SelectSuperlinea[] =>
+  Array.isArray(response) &&
+  response.every(
+    (superLinea) =>
+      typeof superLinea?.id === "number" &&
+      typeof superLinea?.denominacion === "string",
   );
-};
 
 const SuperLineaService = {
   async obtenerSelect(): Promise<SelectSuperlinea[]> {
-    const response = await ApiService.get("/superlinea/select");
+    const response = await ApiService.get("/linea/find-all-for-superlinea/select?denominacion");
 
-    if (!isListResponse(response)) {
+    if (!isSelectResponse(response)) {
       throw contractError("La respuesta de SuperLíneas no es válida.");
     }
 
-    return response.data.map(({ id, denominacion }) => ({ id, denominacion }));
+    return response.map(({ id, denominacion }) => ({ id, denominacion }));
   },
 
   nuevo: (payload: CreateSuperLineaDto) =>
