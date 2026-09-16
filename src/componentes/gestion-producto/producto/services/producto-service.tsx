@@ -4,6 +4,11 @@ import axiosConfig from "../../../../utils/axiosConfig";
 import { createCrudService } from "../../../../utils/crudFactory";
 import { FormValues } from "../interfaces/interfaces-validaciones-item-prod-alternativo";
 import ApiService from "../../../../utils/apiService";
+import {
+  BusquedaProductoPorDenominacionParams,
+  BusquedaProductoPorSuperlineaParams,
+  ProductoListResponse,
+} from "../../../../interfaces/gestion-producto/producto/interfaces-producto";
 
 
 const apiUrl = axiosConfig.apiUrl;
@@ -17,6 +22,13 @@ const ProductoService = {
     return ApiService.get(`/producto/${id}/historial-precios`, { skip, take });
   },
 
+  buscarPorDenominacion: (p: BusquedaProductoPorDenominacionParams) =>
+    ApiService.get("/producto/search-by-denominacion", p) as Promise<ProductoListResponse>,
+
+  buscarPorSuperlinea: (p: BusquedaProductoPorSuperlineaParams) =>
+    ApiService.get("/producto/search-by-superlinea", p) as Promise<ProductoListResponse>,
+
+  
   obtenerMobile: async (filtros: any) => {
     try {
       const token = localStorage.getItem("Token");
