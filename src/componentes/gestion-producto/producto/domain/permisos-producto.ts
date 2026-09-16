@@ -23,6 +23,10 @@ export const puedeHacerAcciones = (roles: number[]) =>
   roles.includes(Rol.ADMINISTRADOR);
 
 export const puedeVerHistorialPrecios = (roles: number[]) =>
+  roles.includes(Rol.ROOT) ||
+  roles.includes(Rol.ADMINISTRADOR) ||
+  roles.includes(Rol.EMPLEADO);
+
 export const puedeBuscarPorDenominacion = (roles: number[]) =>
   roles.includes(Rol.ROOT) ||
   roles.includes(Rol.ADMINISTRADOR) ||

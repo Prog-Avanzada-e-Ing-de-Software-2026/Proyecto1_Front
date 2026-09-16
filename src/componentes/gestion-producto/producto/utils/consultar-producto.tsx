@@ -31,9 +31,12 @@ import { DatosCard } from "../componentes/datos-card";
 import { NotificacionModal } from "../../../NotificacionModal/modales/NotificacionModal";
 import { ProductoNotificacion, EntidadTipo } from "../../../NotificacionModal/interfaces/notificacion.types";
 import { getRoles, getUsuarioId } from "../../../../utils/auth";
-import { puedeHacerAcciones, puedeVerHistorialPrecios } from "../domain/permisos-producto";
-
-import { puedeBuscarPorDenominacion, puedeBuscarPorSeleccion, puedeHacerAcciones } from "../domain/permisos-producto";
+import {
+  puedeBuscarPorDenominacion,
+  puedeBuscarPorSeleccion,
+  puedeHacerAcciones,
+  puedeVerHistorialPrecios,
+} from "../domain/permisos-producto";
 import LineaService from "../../linea/services/linea-service";
 import SuperLineaService from "../../superlinea/services/superlinea-service";
 import { SelectLinea } from "../../../../interfaces/gestion-producto/linea/interfaces-linea";
