@@ -1,99 +1,34 @@
-import React from "react";
-import { Navigate, useLocation, Outlet } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
-import {
-  TipoAlertaConfirmacion,
-  TituloAlertaConfirmacion,
-  useConfirmation,
-} from "../componentes/herramientas/alertas/alertas-confirmacion";
+import { AlertasConfirmacion, TipoAlertaConfirmacion } from "../componentes/herramientas/alertas/alertas-confirmacion";
 
 interface PrivateRouteProps {
   allowedRoles: number[];
 }
 
-interface DecodedToken {
-  sub: number;
-  roles: number[];
-  empresaId: number;
-  puntoVentaId: number;
- // rolId: number;
+function AccesoDenegado() {
+  const navigate = useNavigate();
+  const volver = () => navigate("/admin", { replace: true });
+  return (
+    <AlertasConfirmacion isOpen onClose={volver} onConfirm={volver}
+      type={TipoAlertaConfirmacion.WARNING_ERROR} title="Advertencia"
+      message="No tienes permiso para acceder a esta sección." confirmText="Aceptar" />
+  );
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
-  const token = localStorage.getItem("Token");
+export default function PrivateRoute({ allowedRoles }: PrivateRouteProps) {
   const location = useLocation();
-  let userRole: number | null = null;
-  const { showConfirmation, AlertasConfirmacion: AlertasConfirmacion } = useConfirmation();
+  const token = localStorage.getItem("Token");
+  if (!token) return <Navigate to="/login" state={{ from: location }} replace />;
 
-  const decodedToken: DecodedToken = jwtDecode(token);
-
-  if (!decodedToken.roles || !Array.isArray(decodedToken.roles)) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const userRoles = decodedToken.roles;
-
-  const hasPermission = userRoles.some(role =>
-    allowedRoles.includes(role)
-  );
-
-
-  if (!token) {
-    // Si no está logueado, redirige a login
+  let roles: number[];
+  try {
+    const decoded = jwtDecode<{ roles?: number[] }>(token);
+    if (!Array.isArray(decoded.roles)) throw new Error("Roles inválidos");
+    roles = decoded.roles;
+  } catch {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-
-  if (token) {
-    try {
-      const decodedToken: DecodedToken = jwtDecode<DecodedToken>(token);
-      const userRoles = decodedToken.roles;
-      const hasPermission = userRoles.some(role =>
-        allowedRoles.includes(role)
-      );
-      if (hasPermission) {
-        return <Outlet />;
-      }
-      //userRole = decodedToken.rolId;
-    } catch (error) {
-      console.error("Error decoding token", error);
-    }
-  }
-
-//  const userRoles = decodedToken.roles;
-
-  
-
-
- // if (userRole !== null && allowedRoles.includes(userRole)) {
-    // Si el rol es permitido, renderiza el componente hijo
- //   return <Outlet />;
- // }
-
-  // Si el rol no es permitido, muestra una alerta
-  React.useEffect(() => {
-    const handleConfirmation = async () => {
-      const confirmed = await showConfirmation({
-        type: TipoAlertaConfirmacion.WARNING_ERROR,
-        title: TituloAlertaConfirmacion.WARNING_ERROR,
-        message: "No tienes permiso para acceder a esta sección.",
-        confirmText: "Aceptar",
-        cancelText: "Cancelar",
-        onConfirm: () => {},
-      });
-      if (confirmed) {
-        window.location.href = "/admin";
-      }
-    };
-    handleConfirmation();
-  }, []);
-
-  // Redirige al usuario a una página de acceso denegado o login
-  return (
-    <>
-      <AlertasConfirmacion />
-    </>
-  );
-};
-
-export default PrivateRoute;
+  return roles.some((role) => allowedRoles.includes(role)) ? <Outlet /> : <AccesoDenegado />;
+}
