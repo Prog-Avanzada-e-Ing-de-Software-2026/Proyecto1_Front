@@ -8,6 +8,7 @@ import {
 } from "../../../../interfaces/gestion-producto/superlinea/interfaces-superlinea";
 import { Auditoria, ResponsePost } from "../../../../interfaces/generales/interfaces-generales";
 import ApiService from "../../../../utils/apiService";
+import { esSelectOptionArray, mapearSelectOptions } from "../../../../utils/selectOption";
 
 const contractError = (message: string) => ({
   response: { data: { message } },
@@ -22,14 +23,24 @@ const isSelectResponse = (response: unknown): response is SelectSuperlinea[] =>
   );
 
 const SuperLineaService = {
-  async obtenerSelect(): Promise<SelectSuperlinea[]> {
-    const response = await ApiService.get("/linea/find-all-for-superlinea/select?denominacion");
+  async obtenerSelectParaLinea(): Promise<SelectSuperlinea[]> {
+    const response = await ApiService.get("/linea/find-all-for-superlinea/select");
 
     if (!isSelectResponse(response)) {
       throw contractError("La respuesta de SuperLíneas no es válida.");
     }
 
     return response.map(({ id, denominacion }) => ({ id, denominacion }));
+  },
+
+  async obtenerSelectParaProductos(denominacion: string): Promise<SelectSuperlinea[]> {
+    const response = await ApiService.get("/superlinea/select", { denominacion });
+
+    if (!esSelectOptionArray(response)) {
+      throw contractError("La respuesta de SuperLíneas no es válida.");
+    }
+
+    return mapearSelectOptions(response);
   },
 
   nuevo: (payload: CreateSuperLineaDto) =>

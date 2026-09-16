@@ -77,7 +77,7 @@ export default function RegistrarActualizarLineaForm({
     setSuperlineasError(undefined);
 
     try {
-      const opciones = await SuperLineaService.obtenerSelect();
+      const opciones = await SuperLineaService.obtenerSelectParaLinea();
       setSuperlineas(opciones);
       clearErrors("root");
     } catch (error) {

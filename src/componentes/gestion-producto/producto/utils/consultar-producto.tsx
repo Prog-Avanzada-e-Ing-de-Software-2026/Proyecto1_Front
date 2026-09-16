@@ -655,7 +655,7 @@ export default function ConsultarProductos() {
       return;
     }
     try {
-      const opciones = await SuperLineaService.obtenerSelect(terminoSuperlinea);
+      const opciones = await SuperLineaService.obtenerSelectParaProductos(terminoSuperlinea);
       setOpcionesSuperlinea(opciones);
       // CR-004 A3: option count fires only after success (WARNING when 0).
       avisarResultados(opciones.length, "SuperLínea", "SuperLíneas", termino);
