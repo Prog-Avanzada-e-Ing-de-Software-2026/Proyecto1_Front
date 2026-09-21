@@ -19,9 +19,10 @@ Uno de los pilares de DDD es que todo el equipo —negocio, análisis y desarrol
 
 | Término | Significado en el dominio |
 |---|---|
-| **Producto** | Bien comercializable gestionado por el sistema, identificado por marca, línea y denominación. |
+| **Producto** | Bien comercializable gestionado por el sistema, identificado por marca, línea, presentación y denominación. Cada producto tiene una sola presentación: distintas formas comerciales (ej. 1L y 2,5L) son productos distintos. |
 | **Marca** | Fabricante o identificación comercial del producto. |
 | **Línea** | Categoría o familia a la que pertenece el producto (ej.: Gaseosas). |
+| **Presentación** | Forma comercial en la que se ofrece un producto (ej.: botella 2L, pack x6, lata 500ml). Tiene identidad y ciclo de vida propios; puede asociarse a varios productos. |
 | **Costo** | Valor de adquisición del producto, base para calcular el precio. |
 | **Margen** | Porcentaje de ganancia aplicado sobre el costo para obtener el precio de venta. |
 | **Precio** | Valor de venta al público. Se deriva de Costo + Margen. |
