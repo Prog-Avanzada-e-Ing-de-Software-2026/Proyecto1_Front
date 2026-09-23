@@ -113,11 +113,15 @@ export default function RegistrarActualizarLineaForm({
 
   const onSubmit = async (formData: FormValues) => {
     try {
+      const { superLineaId, observacion, ...lineaValues } = formData;
+      const observacionNormalizada = observacion?.trim();
+      const observacionPayload = observacionNormalizada ? { observacion: observacionNormalizada } : {};
+
       if (linea) {
-        const { superLineaId, ...lineaValues } = formData;
         const superLineaInicialId = linea.superLinea?.id ?? linea.superlinea?.id;
         const payload = {
           ...lineaValues,
+          ...observacionPayload,
           usuarioUpdatedId: usuarioId,
           ...(superLineaId !== superLineaInicialId ? { superLineaId } : {}),
         };
@@ -125,9 +129,9 @@ export default function RegistrarActualizarLineaForm({
         onClose();
         onSuccess(response.mensaje);
       } else {
-        const { superLineaId, ...lineaValues } = formData;
         const response = await LineaService.nuevo({
           ...lineaValues,
+          ...observacionPayload,
           usuarioCreatedId: usuarioId,
           superLineaId: Number(superLineaId),
         });
