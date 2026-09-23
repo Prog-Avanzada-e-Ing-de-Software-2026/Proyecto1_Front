@@ -40,9 +40,15 @@ export default function RegistrarSuperlinea({
 
   const onSubmit = async (formData: FormValues) => {
     try {
+      const observacion = formData.observacion?.trim();
+      const payload = {
+        denominacion: formData.denominacion,
+        ...(observacion ? { observacion } : {}),
+      };
+
       const response = superLinea
-        ? await SuperLineaService.actualizar(superLinea.id, { ...formData, usuarioUpdatedId: usuarioId })
-        : await SuperLineaService.nuevo({ ...formData, usuarioCreatedId: usuarioId });
+        ? await SuperLineaService.actualizar(superLinea.id, { ...payload, usuarioUpdatedId: usuarioId })
+        : await SuperLineaService.nuevo({ ...payload, usuarioCreatedId: usuarioId });
       await onSuccess(response.mensaje);
       onClose();
     } catch (error) {
