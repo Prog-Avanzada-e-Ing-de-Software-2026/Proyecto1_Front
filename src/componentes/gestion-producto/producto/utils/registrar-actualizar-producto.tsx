@@ -327,7 +327,7 @@ export default function RegistrarActualizarProductoForm({
             ...formData,
             usuarioUpdatedId: usuarioId,
           },
-          ["observacion", "codigoProveedor", "codigoReferencia"],
+          ["observacion", "codigoProveedor", "codigoBarra", "codigoReferencia"],
         );
         // cantidadPorPack solo aplica cuando utilizaPack está activo.
         if (!formData.utilizaPack) delete payload.cantidadPorPack;
@@ -340,7 +340,7 @@ export default function RegistrarActualizarProductoForm({
             stock: Number(formData.stock),
             usuarioCreatedId: usuarioId,
           },
-          ["observacion", "codigoProveedor", "codigoReferencia"],
+          ["observacion", "codigoProveedor", "codigoBarra", "codigoReferencia"],
         );
         // cantidadPorPack solo aplica cuando utilizaPack está activo.
         if (!formData.utilizaPack) delete payload.cantidadPorPack;
