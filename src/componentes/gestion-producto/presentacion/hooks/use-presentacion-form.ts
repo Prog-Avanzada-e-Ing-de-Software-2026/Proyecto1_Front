@@ -7,9 +7,15 @@ import {
   transformData,
 } from "../interfaces/interfaces-validaciones-presentacion";
 import { Presentacion } from "../../../../interfaces/gestion-producto/presentacion/interfaces-presentacion";
-import { parseApiError } from "../../../../utils/errores";
+import { applyApiErrors, ApiFieldMap } from "../../../../utils/errores";
+import { omitEmptyOptionalStrings } from "../../../../utils/payload";
 import { ResponsePost } from "../../../../interfaces/generales/interfaces-generales";
 import { getUsuarioId } from "../../../../utils/auth";
+
+const presentacionFieldMap: ApiFieldMap<FormValues> = {
+  denominacion: "denominacion",
+  observacion: "observacion",
+};
 
 export function usePresentacionForm(
   presentacion: Presentacion | undefined,
@@ -34,18 +40,24 @@ export function usePresentacionForm(
 
     try {
       if (presentacion) {
-        const payload = {
-          denominacion: formData.denominacion,
-          observacion: formData.observacion,
-          usuarioUpdatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            denominacion: formData.denominacion,
+            observacion: formData.observacion,
+            usuarioUpdatedId: usuarioId,
+          },
+          ["observacion"],
+        );
 
         response = await PresentacionService.actualizar(presentacion.id, payload);
       } else {
-        const payload = {
-          ...formData,
-          usuarioCreatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            ...formData,
+            usuarioCreatedId: usuarioId,
+          },
+          ["observacion"],
+        );
 
         response = await PresentacionService.nuevo(payload);
       }
@@ -53,12 +65,7 @@ export function usePresentacionForm(
       onClose();
       onSuccess(response.mensaje);
     } catch (error) {
-      const errorMessage = parseApiError(error);
-
-      setError("root", {
-        type: "manual",
-        message: errorMessage,
-      });
+      applyApiErrors(error, setError, presentacionFieldMap);
     }
   };
 

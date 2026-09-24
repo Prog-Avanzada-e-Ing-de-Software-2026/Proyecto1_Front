@@ -11,11 +11,16 @@ import {
   useConfirmation,
 } from "../../../herramientas/alertas/alertas-confirmacion";
 import { getUsuarioId } from "../../../../utils/auth";
-import { parseApiError } from "../../../../utils/errores";
+import { applyApiErrors, ApiFieldMap } from "../../../../utils/errores";
 import { FormValues, schema } from "../interfaces/interfaces-validaciones-superlinea";
 import { transformData } from "../interfaces/interfaces-validaciones-superlinea";
 import SuperLineaService from "../services/superlinea-service";
 import { SuperLineaDto } from "../../../../interfaces/gestion-producto/superlinea/interfaces-superlinea";
+
+const superlineaFieldMap: ApiFieldMap<FormValues> = {
+  denominacion: "denominacion",
+  observacion: "observacion",
+};
 
 export default function RegistrarSuperlinea({
   onClose,
@@ -52,7 +57,7 @@ export default function RegistrarSuperlinea({
       await onSuccess(response.mensaje);
       onClose();
     } catch (error) {
-      setError("root", { type: "manual", message: parseApiError(error) });
+      applyApiErrors(error, setError, superlineaFieldMap);
     }
   };
 
@@ -95,7 +100,11 @@ export default function RegistrarSuperlinea({
             </CardContent>
 
             {errors.root?.message && (
-              <div className="text-red-600 text-center mb-4">
+              <div
+                className="text-red-600 text-center mb-4"
+                role="alert"
+                aria-live="assertive"
+              >
                 {String(errors.root.message)}
               </div>
             )}

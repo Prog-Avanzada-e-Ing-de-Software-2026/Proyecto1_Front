@@ -8,9 +8,15 @@ import {
   transformData,
 } from "../interfaces/interfaces-validaciones-marca";
 import { Marca } from "../../../../interfaces/gestion-producto/marca/interfaces-marca";
-import { parseApiError } from "../../../../utils/errores";
+import { applyApiErrors, ApiFieldMap } from "../../../../utils/errores";
+import { omitEmptyOptionalStrings } from "../../../../utils/payload";
 import { ResponsePost } from "../../../../interfaces/generales/interfaces-generales";
 import { getUsuarioId } from "../../../../utils/auth";
+
+const marcaFieldMap: ApiFieldMap<FormValues> = {
+  denominacion: "denominacion",
+  observacion: "observacion",
+};
 
 export function useMarcaForm(
   marca: Marca | undefined,
@@ -39,20 +45,26 @@ export function useMarcaForm(
 
     try {
       if (marca) {
-        const payload = {
-          denominacion: formData.denominacion,
-          observacion: formData.observacion,
-          usuarioUpdatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            denominacion: formData.denominacion,
+            observacion: formData.observacion,
+            usuarioUpdatedId: usuarioId,
+          },
+          ["observacion"],
+        );
 
         console.log("Payload enviado:", JSON.stringify(payload, null, 2));
 
         response = await MarcaService.actualizar(marca.id, payload);
       } else {
-        const payload = {
-          ...formData,
-          usuarioCreatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            ...formData,
+            usuarioCreatedId: usuarioId,
+          },
+          ["observacion"],
+        );
 
         console.log("Payload enviado:", JSON.stringify(payload, null, 2));
 
@@ -62,12 +74,7 @@ export function useMarcaForm(
       onClose();
       onSuccess(response.mensaje);
     } catch (error) {
-      const errorMessage = parseApiError(error);
-
-      setError("root", {
-        type: "manual",
-        message: errorMessage,
-      });
+      applyApiErrors(error, setError, marcaFieldMap);
     }
   };
 
