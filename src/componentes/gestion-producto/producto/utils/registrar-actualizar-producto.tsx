@@ -120,7 +120,7 @@ export default function RegistrarActualizarProductoForm({
   const [mostrarFormularioMarca, setMostrarFormularioMarca] = useState(false);
   const [mostrarFormularioPresentacion, setMostrarFormularioPresentacion] = useState(false);
   const [itemProdAlternativoSinAgregar, setItemProdAlternativoSinAgregar] = useState(false);
-  const [sugerenciaDenominacionActiva, setSugerenciaDenominacionActiva] = useState(!producto);
+  const sugerenciaDenominacionActivaRef = useRef(!producto);
   const ultimaDenominacionAutomaticaRef = useRef("");
   const preloadErrorAlertSentRef = useRef(false);
   const { alerts, addAlert, removeAlert } = useAlerts();
@@ -185,18 +185,18 @@ export default function RegistrarActualizarProductoForm({
 
     const valor = (denominacionActual ?? "").trim();
     if (!valor) {
-      setSugerenciaDenominacionActiva(true);
+      sugerenciaDenominacionActivaRef.current = true;
       return;
     }
 
     if (valor !== ultimaDenominacionAutomaticaRef.current.trim()) {
-      setSugerenciaDenominacionActiva(false);
+      sugerenciaDenominacionActivaRef.current = false;
     }
   }, [denominacionActual, producto]);
 
   // CR-005: sugerir Marca + Línea + Presentación solo al crear
   useEffect(() => {
-    if (producto || !sugerenciaDenominacionActiva) {
+    if (producto || !sugerenciaDenominacionActivaRef.current) {
       return;
     }
 
@@ -227,7 +227,6 @@ export default function RegistrarActualizarProductoForm({
     setValue("denominacion", sugerida, { shouldValidate: true });
   }, [
     producto,
-    sugerenciaDenominacionActiva,
     marcaIdActual,
     lineaIdActual,
     presentacionIdActual,
