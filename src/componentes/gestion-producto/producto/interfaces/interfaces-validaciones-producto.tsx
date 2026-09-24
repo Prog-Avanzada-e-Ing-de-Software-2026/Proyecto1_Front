@@ -23,10 +23,10 @@ export interface FormValues {
   envioGratis?: boolean | null; */
   lineaId: number;
   marcaId: number;
+  presentacionId: number;
   /* subLineaId?: number | null */
   alicuotaIva: number | null;
-  /* ubicacion?: string | null;
-  presentacionId: number; */
+  /* ubicacion?: string | null; */
   stockMinimo?: number;
   cantidadPorPack?: number;
   utilizaStockMinimo?: boolean;
@@ -87,16 +87,18 @@ export const schema = (utilizaStockMinimo: boolean, utilizaPack: boolean, usaOfe
       .required("La línea es obligatoria.")
       .transform((value, originalValue) => (originalValue === "" ? null : value)) // Si el valor es una cadena vacía, lo convierte en null.
       .required("La linea es obligatoria."),
+    presentacionId: yup
+      .number()
+      .typeError("La presentación es obligatoria.")
+      .required("La presentación es obligatoria.")
+      .transform((value, originalValue) => (originalValue === "" ? null : value))
+      .moreThan(0, "La presentación es obligatoria."),
     alicuotaIva: yup
       .number()
       .oneOf(Object.values(AlicuotaIva), "Alicuota IVA inválida")
       .required("La alícuota IVA es obligatoria.")
       .nullable(),
     /* ubicacion: yup.string().optional().max(255, "Máximo 255 caracteres.").nullable(),
-    presentacionId: yup
-      .number()
-      .typeError("La unidad de medida es obligatoria.")
-      .required("La unidad de medida es obligatoria."),
     subLineaId: yup
     .number()
     .typeError("La sublinea es obligatoria.")
@@ -176,9 +178,9 @@ export const transformData = (producto: Producto): FormValues => {
    // ubicacion: producto.ubicacion ?? null,
     marcaId: producto.marca.id ?? 0,
     lineaId: producto.linea.id ?? 0,
-   /*  subLineaId: producto.sublinea?.id ?? 0,
-    presentacionId: producto.presentacion.id ?? 0,
- */
+    presentacionId: producto.presentacion?.id ?? 0,
+   /*  subLineaId: producto.sublinea?.id ?? 0, */
+
     stockMinimo: producto.stockMinimo ?? null,
     cantidadPorPack: producto.cantidadPorPack ?? null,
     utilizaStockMinimo: producto.utilizaStockMinimo,
