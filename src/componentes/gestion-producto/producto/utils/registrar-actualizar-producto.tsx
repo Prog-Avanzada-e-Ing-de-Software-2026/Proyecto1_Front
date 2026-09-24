@@ -16,7 +16,8 @@ import { AlicuotaIva, ResponsePost } from "../../../../interfaces/generales/inte
 import Select from "react-select";
 import { useEnterFocus } from "../../../herramientas/formateo-de-campos/movimiento-campos";
 import { useConfiguracionSistema } from "../../../sistema/ConfiguracionSistemaContext";
-import { parseApiError } from "../../../../utils/errores";
+import { applyApiErrors, ApiFieldMap } from "../../../../utils/errores";
+import { omitEmptyOptionalStrings } from "../../../../utils/payload";
 import { Layers } from "lucide-react";
 import RegistrarActualizarMarcaForm from "../../marca/utils/registrar-actualizar-marca";
 import { ItemProveedor } from "../../../../interfaces/gestion-producto/producto/interfaces-item-proveedor";
@@ -35,6 +36,26 @@ import PorcentajeInput from "../../../herramientas/formateo-de-campos/porcentaje
 import { Alertas, TipoAlerta, TituloAlerta, useAlerts } from "../../../herramientas/alertas/alertas";
 import { generarDenominacionAutomatica } from "../domain/generar-denominacion-automatica";
 
+const productoFieldMap: ApiFieldMap<FormValues> = {
+  denominacion: "denominacion",
+  observacion: "observacion",
+  codigoProveedor: "codigoProveedor",
+  codigoReferencia: "codigoReferencia",
+  codigoBarra: "codigoBarra",
+  stock: "stock",
+  costo: "costo",
+  precio: "precio",
+  porcentaje: "porcentaje",
+  lineaId: "lineaId",
+  marcaId: "marcaId",
+  presentacionId: "presentacionId",
+  alicuotaIva: "alicuotaIva",
+  stockMinimo: "stockMinimo",
+  cantidadPorPack: "cantidadPorPack",
+  utilizaStockMinimo: "utilizaStockMinimo",
+  utilizaPack: "utilizaPack",
+};
+
 export default function RegistrarActualizarProductoForm({
   producto,
   onClose,
@@ -48,7 +69,6 @@ export default function RegistrarActualizarProductoForm({
   const usuarioId = getUsuarioId();
 
   const { configuracion } = useConfiguracionSistema();
-  const [rStockCritico, setStockCritico] = useState(false);
   const [pack, setPack] = useState(false);
   const [usaOferta, setUsaOferta] = useState(false);
   const [lineaSeleccionada, setLineaSeleccionada] = useState<Linea>({} as Linea);
@@ -56,7 +76,7 @@ export default function RegistrarActualizarProductoForm({
   console.log("Configuración del sistema:", configuracion);
 
   const methods = useForm<FormValues>({
-    resolver: yupResolver(schema(rStockCritico, pack, usaOferta)),
+    resolver: yupResolver(schema(pack, usaOferta, !producto)),
     defaultValues: producto
       ? transformData(producto)
       : {
@@ -99,7 +119,6 @@ export default function RegistrarActualizarProductoForm({
   const stock = watch(`stock`);
   const stockMinimo = watch("stockMinimo");
   const cantidadPorPack = watch("cantidadPorPack");
-  const utilizaStockMinimo = watch("utilizaStockMinimo");
   const utilizaPack = watch("utilizaPack");
   const denominacionActual = watch("denominacion");
   const marcaIdActual = watch("marcaId");
@@ -131,25 +150,23 @@ export default function RegistrarActualizarProductoForm({
   //=============================== FUNCIONALIDAD ==================================
 
   useEffect(() => {
-    if (!utilizaStockMinimo) {
-      setValue("stockMinimo", 0);
-    }
     if (!utilizaPack) {
       setValue("cantidadPorPack", 0);
     }
-    
-  }, [utilizaStockMinimo, utilizaPack, false, setValue]);
+  }, [utilizaPack, false, setValue]);
 
   useEffect(() => {
-    setValue("stockMinimo", lineaSeleccionada.stockMinimo || 0);
-    setValue("utilizaStockMinimo", lineaSeleccionada.utilizaStockMinimo || false);
+    const minimoLinea = lineaSeleccionada?.stockMinimo;
+    if (minimoLinea && minimoLinea > 0) {
+      setValue("stockMinimo", minimoLinea);
+    }
+    setValue("utilizaStockMinimo", lineaSeleccionada?.utilizaStockMinimo || false);
   }, [lineaSeleccionada]);
 
   useEffect(() => {
     setPack(utilizaPack || false);
-    setStockCritico(utilizaStockMinimo || false);
     setUsaOferta(false);
-  }, [utilizaPack, utilizaStockMinimo, false]);
+  }, [utilizaPack, false]);
 
   // CR-005: detectar edición manual vs Denominación automática (solo creación)
   useEffect(() => {
@@ -282,17 +299,28 @@ export default function RegistrarActualizarProductoForm({
       }
 
       if (producto) {
-        const payload = {
-          ...formData,
-          usuarioUpdatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            ...formData,
+            usuarioUpdatedId: usuarioId,
+          },
+          ["observacion", "codigoProveedor", "codigoReferencia"],
+        );
+        // cantidadPorPack solo aplica cuando utilizaPack está activo.
+        if (!formData.utilizaPack) delete payload.cantidadPorPack;
 
         response = await ProductoService.actualizar(producto.id, payload);
       } else {
-        const payload = {
-          ...formData,
-          usuarioCreatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            ...formData,
+            stock: Number(formData.stock),
+            usuarioCreatedId: usuarioId,
+          },
+          ["observacion", "codigoProveedor", "codigoReferencia"],
+        );
+        // cantidadPorPack solo aplica cuando utilizaPack está activo.
+        if (!formData.utilizaPack) delete payload.cantidadPorPack;
 
         response = await ProductoService.nuevo(payload);
       }
@@ -300,12 +328,7 @@ export default function RegistrarActualizarProductoForm({
       await onSuccess(response.mensaje);
       onClose();
     } catch (error) {
-      const errorMessage = parseApiError(error);
-
-      setError("root", {
-        type: "manual",
-        message: errorMessage,
-      });
+      applyApiErrors(error, setError, productoFieldMap);
     }
   };
 
@@ -534,7 +557,7 @@ export default function RegistrarActualizarProductoForm({
                         getOptionValue={(option) => String(option.id)}
                         isDisabled={producto && producto.sistema > 0 ? true : false}
                         onChange={(selectedOption) => {
-                          methods.setValue(`alicuotaIva`, selectedOption?.id || 0);
+                          methods.setValue(`alicuotaIva`, selectedOption?.id ?? null);
                         }}
                         className="text-black"
                         menuPortalTarget={document.body}
@@ -562,15 +585,17 @@ export default function RegistrarActualizarProductoForm({
                   </div>
 
                   <div className="flex-1 min-w-[120px]">
-                    {producto ? (
-                      <CantidadesInput
-                        name={`stock`}
-                        label="Stock"
-                        value={stock || 0}
-                        onChange={(value) => setValue(`stock`, Number(value))}
-                        disabled={true}
-                      />
-                    ) : null}
+                    <CantidadesInput
+                      name="stock"
+                      label="Stock"
+                      value={producto ? stock || 0 : (stock as number)}
+                      onChange={(value) => {
+                        if (!producto) {
+                          setValue("stock", Number(value));
+                        }
+                      }}
+                      disabled={!!producto}
+                    />
                   </div>
                 </div>
 
@@ -592,7 +617,6 @@ export default function RegistrarActualizarProductoForm({
                       label="Stock Crítico"
                       value={stockMinimo || 0}
                       onChange={(value) => setValue(`stockMinimo`, Number(value))}
-                      disabled={utilizaStockMinimo ? false : true}
                     />
                   </div>
 
@@ -636,7 +660,7 @@ export default function RegistrarActualizarProductoForm({
                 onEnterLinea={(e) => handleEnterEnSelect(e, "LINEA")}
                 onEnterDenominacion={enterToDenominacionMarca}
                 onLineaChange={(linea) => {
-                  methods.setValue("lineaId", linea?.id || 0);
+                  methods.setValue("lineaId", linea?.id ?? null);
                   setSelectedLinea(linea ?? undefined);
                   setLineaSeleccionada(linea as any);
                 }}
@@ -655,7 +679,7 @@ export default function RegistrarActualizarProductoForm({
                 error={errors.marcaId?.message}
                 onEnterMarca={(e) => handleEnterEnSelect(e, "MARCA")}
                 onChangeMarca={(marca) => {
-                  methods.setValue("marcaId", marca?.id || 0);
+                  methods.setValue("marcaId", marca?.id ?? null);
                   setSelectedMarca(marca ?? undefined);
                 }}
                 onAgregarMarca={() => setMostrarFormularioMarca(true)}
@@ -673,7 +697,7 @@ export default function RegistrarActualizarProductoForm({
                 error={errors.presentacionId?.message}
                 onEnterPresentacion={(e) => handleEnterEnSelect(e, "PRESENTACION")}
                 onChangePresentacion={(presentacion) => {
-                  methods.setValue("presentacionId", presentacion?.id || 0);
+                  methods.setValue("presentacionId", presentacion?.id ?? null);
                   setSelectedPresentacion(presentacion);
                 }}
                 onAgregarPresentacion={() => setMostrarFormularioPresentacion(true)}
@@ -690,7 +714,15 @@ export default function RegistrarActualizarProductoForm({
               
             </CardContent>
 
-            {errors.root?.message && <div className="text-red-600 text-center mb-4">{String(errors.root.message)}</div>}
+            {errors.root?.message && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="text-red-600 text-center mb-4"
+              >
+                {String(errors.root.message)}
+              </div>
+            )}
 
             {/* Botón de submit */}
             <CardFooter className="flex justify-center">

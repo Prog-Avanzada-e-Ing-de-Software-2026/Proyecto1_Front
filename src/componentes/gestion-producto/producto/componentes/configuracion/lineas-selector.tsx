@@ -1,3 +1,4 @@
+import { useId } from "react";
 import Select from "react-select";
 import { PlusCircle } from "lucide-react";
 import { Linea, SelectLinea } from "../../../../../interfaces/gestion-producto/linea/interfaces-linea";
@@ -45,9 +46,16 @@ export default function LineasSelector({
   onLineaChange,
   onAgregarLinea,
 }: LineasSelectorProps) {
+  const id = useId();
+  const errorId = `${id}-error`;
+  const hasLineaError = !!errors?.lineaId?.message;
+
   return (
     <div className="border border-gray-300 rounded-lg p-2 shadow-sm bg-gray-100">
-      <label className="block text-sm font-medium text-gray-700 py-1">
+      <label
+        htmlFor={id}
+        className="block text-sm font-medium text-gray-700 py-1"
+      >
         Líneas
       </label>
 
@@ -70,9 +78,8 @@ export default function LineasSelector({
         <div className="flex flex-col w-full gap-2">
           <div ref={selectLineaRef}>
             <Select
-              value={
-                lineas.find((l) => l.id === lineaId) ?? selectedLinea
-              }
+              inputId={id}
+              value={lineas.find((l) => l.id === lineaId) ?? selectedLinea}
               options={lineas}
               getOptionLabel={(o) => o.denominacion}
               getOptionValue={(o) => String(o.id)}
@@ -82,10 +89,17 @@ export default function LineasSelector({
               placeholder="Seleccione"
               menuPortalTarget={document.body}
               styles={selectStyles}
+              aria-invalid={hasLineaError}
+              aria-describedby={hasLineaError ? errorId : undefined}
             />
 
-            {errors?.lineaId?.message && (
-              <p className="text-sm text-red-600 mt-1">
+            {hasLineaError && (
+              <p
+                id={errorId}
+                role="alert"
+                aria-live="polite"
+                className="text-sm text-red-600 mt-1"
+              >
                 {errors.lineaId.message}
               </p>
             )}
