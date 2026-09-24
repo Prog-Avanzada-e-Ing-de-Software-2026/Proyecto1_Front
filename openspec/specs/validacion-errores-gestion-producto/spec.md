@@ -1,12 +1,12 @@
 # Capability: validacion-errores-gestion-producto
 
-## Propósito
+## Purpose
 
 Definir validaciones frontend alineadas con el contrato HTTP y una presentación segura, accesible y asociada de errores en los flujos activos de `gestion-producto`.
 
-## Requisitos
+## Requirements
 
-### Requisito: Mapeo de errores HTTP
+### Requirement: Mapeo de errores HTTP
 
 Ante una respuesta HTTP 400 cuyo cuerpo contiene `fieldErrors[]`, el sistema MUST aplicar cada entrada `messages` al campo correspondiente mediante el mecanismo de error del formulario. MUST NOT reemplazar esos mensajes por el literal global `Bad Request Exception`. Los nombres de campo no reconocidos MUST degradar a un error global sin perder el mensaje. Las respuestas 400 sin `fieldErrors`, errores de dominio 400, 401, 403, 404, 409, 500 y fallos de red MUST presentarse como un error global seguro y accesible.
 
@@ -25,7 +25,7 @@ Ante una respuesta HTTP 400 cuyo cuerpo contiene `fieldErrors[]`, el sistema MUS
 - **When** el formulario recibe el error
 - **Then** MUST mostrar un error global seguro, accesible y no dependiente de detalles internos
 
-### Requisito: Validación de identificadores y números
+### Requirement: Validación de identificadores y números
 
 Los identificadores `marcaId` y `lineaId` MUST ser enteros mayores que cero y pertenecer al catálogo. Un selector limpiado MUST NOT persistir `0` como valor válido. `presentacionId` y `superLineaId` MUST conservar sus validaciones existentes de entero positivo. Producto MUST validar `costo` finito y mayor o igual a cero, `stock` y `stockMinimo` finitos y mayores que cero, margen/porcentaje finito y `cantidadPorPack` como entero positivo cuando corresponda. Línea MUST validar `stockMinimo` finito y mayor o igual a cero. Los valores no finitos MUST rechazarse.
 
@@ -44,7 +44,7 @@ Los identificadores `marcaId` y `lineaId` MUST ser enteros mayores que cero y pe
 - **When** se valida el formulario
 - **Then** el campo MUST rechazarse y el envío MUST bloquearse
 
-### Requisito: Validación de denominaciones
+### Requirement: Validación de denominaciones
 
 Producto MUST recortar espacios, limitar `denominacion` a 200 caracteres y aplicar únicamente los caracteres declarados por su patrón contractual, corrigiendo el rango accidental `%-_`. El valor almacenado MUST conservar sus mayúsculas y minúsculas. Marca, Línea, SuperLínea y Presentación MUST mostrar mensajes coherentes con sus patrones; Presentación MUST permitir `.`, `-` y `/`. Ninguna denominación MUST transformarse silenciosamente a minúsculas.
 
@@ -63,7 +63,7 @@ Producto MUST recortar espacios, limitar `denominacion` a 200 caracteres y aplic
 - **When** se valida
 - **Then** esos caracteres MUST aceptarse y el valor MUST conservar su casing
 
-### Requisito: Stock en alta de Producto
+### Requirement: Stock en alta de Producto
 
 El alta de Producto MUST renderizar y validar `stock` como número finito mayor que cero, e incluirlo en el payload de creación. En edición, `stock` MUST permanecer visible, de solo lectura y deshabilitado.
 
@@ -82,7 +82,7 @@ El alta de Producto MUST renderizar y validar `stock` como número finito mayor 
 - **When** se muestra el formulario
 - **Then** `stock` MUST ser visible, de solo lectura y deshabilitado
 
-### Requisito: Configuración de cotización
+### Requirement: Configuración de cotización
 
 Cuando falta `maximoDolar` en la configuración IVECO/NEXPRO, el sistema MUST mostrar claramente que la configuración no está disponible y MUST bloquear el envío. Este requisito no define el piso numérico de la cotización.
 
@@ -91,7 +91,7 @@ Cuando falta `maximoDolar` en la configuración IVECO/NEXPRO, el sistema MUST mo
 - **When** el usuario intenta enviar una cotización
 - **Then** el formulario MUST mostrar el estado de configuración no disponible y MUST bloquear el envío sin convertir la ausencia en `0`
 
-### Requisito: Presentación accesible de errores
+### Requirement: Presentación accesible de errores
 
 `FormInput`, `PriceInput`, `CantidadesInput`, `PorcentajeInput` y `EntidadSelectorBase` MUST exponer `aria-invalid` y `aria-describedby` vinculados a un identificador estable del mensaje. Los mensajes MUST usar `role="alert"` o `aria-live`, permanecer asociados al campo y no requerir cambios en la API pública. Cuando sea posible, un envío fallido MUST enfocar el primer campo inválido.
 
@@ -105,7 +105,7 @@ Cuando falta `maximoDolar` en la configuración IVECO/NEXPRO, el sistema MUST mo
 - **When** el formulario termina la validación
 - **Then** SHOULD enfocar el primer campo inválido sin modificar la API pública de los componentes
 
-### Requisito: Normalización de campos opcionales
+### Requirement: Normalización de campos opcionales
 
 Los campos de texto opcionales del contrato (`observacion`, `codigoProveedor`, `codigoReferencia`, etc.) MUST omitirse del cuerpo del request cuando su valor sea `null`, vacío o contenga únicamente espacios. El sistema MUST NOT enviar `null` para un campo que OpenAPI declare opcional de tipo `string`. La omisión ya existente en Línea y SuperLínea MUST conservarse sin regresiones. El campo `stockMinimo` MUST ser obligatorio, finito y mayor que 0 en el alta y la edición de Producto, y MUST enviarse en el request con independencia de `utilizaStockMinimo`. El campo `cantidadPorPack` MUST omitirse del cuerpo del request cuando `utilizaPack` esté en `false`, y el sistema MUST NOT enviar `0` como sustituto.
 

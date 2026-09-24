@@ -1,10 +1,10 @@
 # Especificación de gestión de SuperLínea
 
-## Propósito
+## Purpose
 
 Define la consulta y el mantenimiento autenticados e independientes de SuperLínea, alineados exclusivamente con el contrato OpenAPI.
 
-## Requisitos
+## Requirements
 
 ### Requirement: Gestionar SuperLíneas
 
