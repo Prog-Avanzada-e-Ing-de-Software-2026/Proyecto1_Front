@@ -29,6 +29,8 @@ interface LineasSelectorProps {
   onLineaChange: (linea: SelectLinea | null) => void;
 
   onAgregarLinea: () => void;
+
+  mensajeSinOpciones?: string;
 }
 
 export default function LineasSelector({
@@ -45,6 +47,7 @@ export default function LineasSelector({
   onEnterLinea,
   onLineaChange,
   onAgregarLinea,
+  mensajeSinOpciones,
 }: LineasSelectorProps) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -89,6 +92,7 @@ export default function LineasSelector({
               placeholder="Seleccione"
               menuPortalTarget={document.body}
               styles={selectStyles}
+              noOptionsMessage={mensajeSinOpciones ? () => mensajeSinOpciones : undefined}
               aria-invalid={hasLineaError}
               aria-describedby={hasLineaError ? errorId : undefined}
             />

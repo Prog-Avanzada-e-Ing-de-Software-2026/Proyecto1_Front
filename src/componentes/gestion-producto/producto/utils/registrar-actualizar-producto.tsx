@@ -56,6 +56,14 @@ const productoFieldMap: ApiFieldMap<FormValues> = {
   utilizaPack: "utilizaPack",
 };
 
+const PRODUCTO_SELECTOR_EMPTY_MESSAGES = {
+  marca: "No hay Marcas disponibles.",
+  linea: "No hay Líneas disponibles.",
+  presentacion: "No hay Presentaciones disponibles.",
+} as const;
+
+type PresentacionOptionsMode = "preload" | "search-result" | "preload-error";
+
 export default function RegistrarActualizarProductoForm({
   producto,
   onClose,
@@ -101,7 +109,7 @@ export default function RegistrarActualizarProductoForm({
   const [marcas, setMarcas] = React.useState<SelectMarca[]>([]);
   const [lineas, setLineas] = React.useState<SelectLinea[]>([]);
   const [presentaciones, setPresentaciones] = React.useState<SelectPresentacion[]>([]);
-  
+  const [presentacionOptionsMode, setPresentacionOptionsMode] = useState<PresentacionOptionsMode>("preload");
   const [denominacionMarca, setDenominacionMarca] = useState(" ");
   const [denominacionLinea, setDenominacionLinea] = useState(" ");
   const [denominacionPresentacion, setDenominacionPresentacion] = useState(" ");
@@ -114,6 +122,7 @@ export default function RegistrarActualizarProductoForm({
   const [itemProdAlternativoSinAgregar, setItemProdAlternativoSinAgregar] = useState(false);
   const [sugerenciaDenominacionActiva, setSugerenciaDenominacionActiva] = useState(!producto);
   const ultimaDenominacionAutomaticaRef = useRef("");
+  const preloadErrorAlertSentRef = useRef(false);
   const { alerts, addAlert, removeAlert } = useAlerts();
 
   const stock = watch(`stock`);
@@ -234,45 +243,60 @@ export default function RegistrarActualizarProductoForm({
 
   useEffect(() => {
     const fetchData = async () => {
+      setPresentacionOptionsMode("preload");
+
       try {
-        if (producto) {
-          setValue("lineaId", producto.linea.id || 0);
-          setSelectedLinea(producto.linea);
+        const [marcasResponse, lineasResponse, presentacionesResponse] = await Promise.all([
+          ProductoService.obtenerTotales({ denominacion: "" }, "marcas"),
+          ProductoService.obtenerTotales({ denominacion: "" }, "lineas"),
+          PresentacionService.select({ denominacion: "" }),
+        ]);
 
-          setValue("marcaId", producto.marca.id || 0);
-          setSelectedMarca(producto.marca);
-
-          setValue("presentacionId", producto.presentacion?.id || 0);
-          setSelectedPresentacion(producto.presentacion ?? null);
-
-          
-          setValue("denominacion", producto.denominacion || "");
-          setValue("observacion", producto.observacion || null);
-          setValue("codigoProveedor", producto.codigoProveedor || "");
-          setValue("codigoBarra", producto.codigoBarra || null);
-          setValue("stock", producto.stock || 0);
-          setValue("costo", producto.costo || 0);
-          
-          //setValue("oferta", producto.oferta || false);
-          setValue("alicuotaIva", producto.alicuotaIva || 0);
-
-          setValue("stockMinimo", producto.stockMinimo || 0);
-          setValue("utilizaStockMinimo", producto.utilizaStockMinimo || false);
-          setValue("cantidadPorPack", producto.cantidadPorPack || 0);
-          setValue("utilizaPack", producto.utilizaPack || false);
-        
-          console.error("llega aca", producto);
-        } else {
-          const [marcasResponse, lineasResponse] = await Promise.all([
-            ProductoService.obtenerTotales({ denominacion: "" }, "marcas"),
-            ProductoService.obtenerTotales({ denominacion: "" }, "lineas"),
-          ]);
-
-          setMarcas(marcasResponse.data);
-          setLineas(lineasResponse.data);
-        }
+        setMarcas(marcasResponse.data);
+        setLineas(lineasResponse.data);
+        setPresentaciones(presentacionesResponse?.data ?? []);
+        preloadErrorAlertSentRef.current = false;
       } catch (error) {
-        console.error("Error al obtener los datos:", error);
+        setPresentacionOptionsMode("preload-error");
+        console.error("Error al cargar las opciones de Marca, Línea y Presentación:", error);
+        if (!preloadErrorAlertSentRef.current) {
+          preloadErrorAlertSentRef.current = true;
+          addAlert({
+            type: TipoAlerta.ERROR,
+            title: TituloAlerta.ERROR,
+            message: "No se pudieron cargar las opciones de Marca, Línea y Presentación.",
+            autoClose: true,
+          });
+        }
+      }
+
+      if (producto) {
+        setValue("lineaId", producto.linea.id || 0);
+        setSelectedLinea(producto.linea);
+
+        setValue("marcaId", producto.marca.id || 0);
+        setSelectedMarca(producto.marca);
+
+        setValue("presentacionId", producto.presentacion?.id || 0);
+        setSelectedPresentacion(producto.presentacion ?? null);
+
+        
+        setValue("denominacion", producto.denominacion || "");
+        setValue("observacion", producto.observacion || null);
+        setValue("codigoProveedor", producto.codigoProveedor || "");
+        setValue("codigoBarra", producto.codigoBarra || null);
+        setValue("stock", producto.stock || 0);
+        setValue("costo", producto.costo || 0);
+        
+        //setValue("oferta", producto.oferta || false);
+        setValue("alicuotaIva", producto.alicuotaIva || 0);
+
+        setValue("stockMinimo", producto.stockMinimo || 0);
+        setValue("utilizaStockMinimo", producto.utilizaStockMinimo || false);
+        setValue("cantidadPorPack", producto.cantidadPorPack || 0);
+        setValue("utilizaPack", producto.utilizaPack || false);
+      
+        console.error("llega aca", producto);
       }
     };
 
@@ -353,6 +377,7 @@ export default function RegistrarActualizarProductoForm({
         }
       }
       if (select === "PRESENTACION") {
+        setPresentacionOptionsMode("search-result");
         const response = await PresentacionService.select({
           denominacion: denominacionPresentacion.trim(),
         });
@@ -665,6 +690,7 @@ export default function RegistrarActualizarProductoForm({
                   setLineaSeleccionada(linea as any);
                 }}
                 onAgregarLinea={() => setMostrarFormularioLinea(true)}
+                mensajeSinOpciones={PRODUCTO_SELECTOR_EMPTY_MESSAGES.linea}
               />
 
               <MarcasSelector
@@ -683,6 +709,7 @@ export default function RegistrarActualizarProductoForm({
                   setSelectedMarca(marca ?? undefined);
                 }}
                 onAgregarMarca={() => setMostrarFormularioMarca(true)}
+                mensajeSinOpciones={PRODUCTO_SELECTOR_EMPTY_MESSAGES.marca}
               />
 
               <PresentacionesSelector
@@ -701,6 +728,7 @@ export default function RegistrarActualizarProductoForm({
                   setSelectedPresentacion(presentacion);
                 }}
                 onAgregarPresentacion={() => setMostrarFormularioPresentacion(true)}
+                mensajeSinOpciones={presentacionOptionsMode === "preload" ? PRODUCTO_SELECTOR_EMPTY_MESSAGES.presentacion : undefined}
               />
 
               </div>

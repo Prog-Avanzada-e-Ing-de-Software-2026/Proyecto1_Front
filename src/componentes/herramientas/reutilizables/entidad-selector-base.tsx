@@ -31,6 +31,8 @@ interface EntidadSelectorBaseProps<T extends EntidadBase> {
   onChange?: (entidad: T | null) => void;
   onAgregar: () => void;
   ocultarAgregar?: boolean;
+  /** Mensaje presentacional cuando no hay opciones disponibles. */
+  mensajeSinOpciones?: string;
 }
 
 export default function EntidadSelectorBase<T extends EntidadBase>({
@@ -49,6 +51,7 @@ export default function EntidadSelectorBase<T extends EntidadBase>({
   onChange,
   onAgregar,
   ocultarAgregar = false,
+  mensajeSinOpciones,
 }: EntidadSelectorBaseProps<T>) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -94,6 +97,7 @@ export default function EntidadSelectorBase<T extends EntidadBase>({
             isDisabled={disabled}
             menuPortalTarget={document.body}
             styles={selectStyles}
+            noOptionsMessage={mensajeSinOpciones ? () => mensajeSinOpciones : undefined}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : undefined}
           />
