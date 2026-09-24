@@ -33,6 +33,7 @@ import RegistrarActualizarPresentacionForm from "../../presentacion/utils/regist
 import PresentacionService from "../../presentacion/services/presentacion-service";
 import PorcentajeInput from "../../../herramientas/formateo-de-campos/porcentaje-input";
 import { Alertas, TipoAlerta, TituloAlerta, useAlerts } from "../../../herramientas/alertas/alertas";
+import { generarDenominacionAutomatica } from "../domain/generar-denominacion-automatica";
 
 export default function RegistrarActualizarProductoForm({
   producto,
@@ -91,6 +92,8 @@ export default function RegistrarActualizarProductoForm({
   const [mostrarFormularioMarca, setMostrarFormularioMarca] = useState(false);
   const [mostrarFormularioPresentacion, setMostrarFormularioPresentacion] = useState(false);
   const [itemProdAlternativoSinAgregar, setItemProdAlternativoSinAgregar] = useState(false);
+  const [sugerenciaDenominacionActiva, setSugerenciaDenominacionActiva] = useState(!producto);
+  const ultimaDenominacionAutomaticaRef = useRef("");
   const { alerts, addAlert, removeAlert } = useAlerts();
 
   const stock = watch(`stock`);
@@ -98,6 +101,10 @@ export default function RegistrarActualizarProductoForm({
   const cantidadPorPack = watch("cantidadPorPack");
   const utilizaStockMinimo = watch("utilizaStockMinimo");
   const utilizaPack = watch("utilizaPack");
+  const denominacionActual = watch("denominacion");
+  const marcaIdActual = watch("marcaId");
+  const lineaIdActual = watch("lineaId");
+  const presentacionIdActual = watch("presentacionId");
   
 
   //=============================== CONSTANTES PARA MOVIMIENTO ENTRE CAMPOS ==================================
@@ -143,6 +150,70 @@ export default function RegistrarActualizarProductoForm({
     setStockCritico(utilizaStockMinimo || false);
     setUsaOferta(false);
   }, [utilizaPack, utilizaStockMinimo, false]);
+
+  // CR-005: detectar edición manual vs Denominación automática (solo creación)
+  useEffect(() => {
+    if (producto) {
+      return;
+    }
+
+    const valor = (denominacionActual ?? "").trim();
+    if (!valor) {
+      setSugerenciaDenominacionActiva(true);
+      return;
+    }
+
+    if (valor !== ultimaDenominacionAutomaticaRef.current.trim()) {
+      setSugerenciaDenominacionActiva(false);
+    }
+  }, [denominacionActual, producto]);
+
+  // CR-005: sugerir Marca + Línea + Presentación solo al crear
+  useEffect(() => {
+    if (producto || !sugerenciaDenominacionActiva) {
+      return;
+    }
+
+    const marca =
+      marcas.find((m) => m.id === marcaIdActual) ?? selectedMarca;
+    const linea =
+      lineas.find((l) => l.id === lineaIdActual) ?? selectedLinea;
+    const presentacion =
+      presentaciones.find((p) => p.id === presentacionIdActual) ??
+      selectedPresentacion;
+
+    const sugerida = generarDenominacionAutomatica({
+      marca: marca?.denominacion,
+      linea: linea?.denominacion,
+      presentacion: presentacion?.denominacion,
+    });
+
+    if (!sugerida) {
+      return;
+    }
+
+    if ((denominacionActual ?? "") === sugerida) {
+      ultimaDenominacionAutomaticaRef.current = sugerida;
+      return;
+    }
+
+    ultimaDenominacionAutomaticaRef.current = sugerida;
+    setValue("denominacion", sugerida, { shouldValidate: true });
+  }, [
+    producto,
+    sugerenciaDenominacionActiva,
+    marcaIdActual,
+    lineaIdActual,
+    presentacionIdActual,
+    marcas,
+    lineas,
+    presentaciones,
+    selectedMarca,
+    selectedLinea,
+    selectedPresentacion,
+    denominacionActual,
+    setValue,
+  ]);
 
   useEffect(() => {
     const fetchData = async () => {
