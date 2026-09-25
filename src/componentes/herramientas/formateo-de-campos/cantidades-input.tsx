@@ -10,6 +10,7 @@ interface CantidadesInputProps {
   disabled?: boolean;
   className?: string;
   maxDigits?: number; // ✅ Nueva prop opcional
+  decimalScale?: number; // ✅ Nueva prop opcional
   onChange: (value: number) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   inputRef?: React.Ref<HTMLInputElement>;
@@ -52,6 +53,7 @@ const CantidadesInput: React.FC<CantidadesInputProps> = ({
   disabled,
   className,
   maxDigits = 5, // ✅ Valor por defecto si no se pasa
+  decimalScale = 0, // ✅ Valor por defecto si no se pasa
   onChange,
   onKeyDown,
   inputRef,
@@ -91,16 +93,18 @@ const CantidadesInput: React.FC<CantidadesInputProps> = ({
           value={value}
           id={id}
           decimalSeparator=","
-          decimalScale={0}
+          decimalScale={decimalScale}
           disabled={disabled}
           allowNegative={false}
           onValueChange={(values) => {
             onChange(values.floatValue ?? 0);
           }}
           isAllowed={({ floatValue }) => {
-            // ✅ Limitar la cantidad de dígitos
+            // ✅ Limitar la cantidad de dígitos de la parte entera
+            // (los decimales ya quedan acotados por decimalScale)
             if (floatValue === undefined) return true;
-            return floatValue.toString().length <= maxDigits;
+            const integerDigits = Math.trunc(Math.abs(floatValue)).toString().length;
+            return integerDigits <= maxDigits;
           }}
           aria-invalid={hasError}
           aria-describedby={hasError ? errorId : undefined}

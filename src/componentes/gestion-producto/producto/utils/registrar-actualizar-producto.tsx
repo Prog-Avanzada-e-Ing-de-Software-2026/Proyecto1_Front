@@ -613,6 +613,7 @@ export default function RegistrarActualizarProductoForm({
                       name="stock"
                       label="Stock"
                       value={producto ? stock || 0 : (stock as number)}
+                      decimalScale={3}
                       onChange={(value) => {
                         if (!producto) {
                           setValue("stock", Number(value));
@@ -640,6 +641,7 @@ export default function RegistrarActualizarProductoForm({
                       name={`stockMinimo`}
                       label="Stock Crítico"
                       value={stockMinimo || 0}
+                      decimalScale={3}
                       onChange={(value) => setValue(`stockMinimo`, Number(value))}
                     />
                   </div>

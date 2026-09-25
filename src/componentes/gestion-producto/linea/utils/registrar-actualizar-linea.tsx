@@ -219,6 +219,7 @@ export default function RegistrarActualizarLineaForm({
                     name="stockMinimo"
                     label="Stock Crítico"
                     value={stockMinimo || 0}
+                    decimalScale={3}
                     onChange={(value) => setValue("stockMinimo", Number(value))}
                     disabled={utilizaStockMinimo ? false : true}
                   />
