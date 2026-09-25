@@ -1,3 +1,4 @@
+import { useId } from "react";
 import Select from "react-select";
 import { PlusCircle } from "lucide-react";
 import { Button } from "../../ui/Button";
@@ -30,6 +31,8 @@ interface EntidadSelectorBaseProps<T extends EntidadBase> {
   onChange?: (entidad: T | null) => void;
   onAgregar: () => void;
   ocultarAgregar?: boolean;
+  /** Mensaje presentacional cuando no hay opciones disponibles. */
+  mensajeSinOpciones?: string;
 }
 
 export default function EntidadSelectorBase<T extends EntidadBase>({
@@ -48,10 +51,17 @@ export default function EntidadSelectorBase<T extends EntidadBase>({
   onChange,
   onAgregar,
   ocultarAgregar = false,
+  mensajeSinOpciones,
 }: EntidadSelectorBaseProps<T>) {
+  const id = useId();
+  const errorId = `${id}-error`;
+
   return (
     <div className="border border-gray-300 rounded-lg p-2 shadow-sm bg-gray-100">
-      <label className="block text-sm font-medium text-gray-700 py-1">
+      <label
+        htmlFor={id}
+        className="block text-sm font-medium text-gray-700 py-1"
+      >
         {titulo}
       </label>
 
@@ -63,9 +73,7 @@ export default function EntidadSelectorBase<T extends EntidadBase>({
             type="text"
             placeholder="Denominación"
             value={denominacion}
-            onChange={(e) =>
-              setDenominacion(e.target.value.trimStart())
-            }
+            onChange={(e) => setDenominacion(e.target.value.trimStart())}
             onKeyDown={onEnterInput}
             disabled={disabled}
             className="w-full border border-gray-300 bg-white text-black rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
@@ -75,26 +83,32 @@ export default function EntidadSelectorBase<T extends EntidadBase>({
         {/* Select */}
         <div ref={selectRef} className="w-full">
           <Select
-            value={
-              opciones.find((o) => o.id === selectedId) ??
-              selected
-            }
+            inputId={id}
+            value={opciones.find((o) => o.id === selectedId) ?? selected}
             options={opciones}
             getOptionLabel={(o) => o.denominacion}
             getOptionValue={(o) => String(o.id)}
             onChange={(opt) => {
-                if (!onChange) return;
-                onChange(opt as T | null);
+              if (!onChange) return;
+              onChange(opt as T | null);
             }}
             onKeyDown={onEnterSelect}
             placeholder="Seleccione"
             isDisabled={disabled}
             menuPortalTarget={document.body}
             styles={selectStyles}
+            noOptionsMessage={mensajeSinOpciones ? () => mensajeSinOpciones : undefined}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : undefined}
           />
 
           {error && (
-            <p className="text-sm text-red-600 mt-1">
+            <p
+              id={errorId}
+              role="alert"
+              aria-live="polite"
+              className="text-sm text-red-600 mt-1"
+            >
               {error}
             </p>
           )}
@@ -128,8 +142,8 @@ const selectStyles = {
     backgroundColor: state.isSelected
       ? "#3b82f6"
       : state.isFocused
-      ? "#93c5fd"
-      : "white",
+        ? "#93c5fd"
+        : "white",
   }),
   menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
 };

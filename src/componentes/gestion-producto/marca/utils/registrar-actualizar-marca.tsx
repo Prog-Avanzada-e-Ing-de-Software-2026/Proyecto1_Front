@@ -82,7 +82,11 @@ export default function RegistrarActualizarMarcaForm({
             </CardContent>
 
             {errors.root?.message && (
-              <div className="text-red-600 text-center mb-4">
+              <div
+                className="text-red-600 text-center mb-4"
+                role="alert"
+                aria-live="assertive"
+              >
                 {String(errors.root.message)}
               </div>
             )}

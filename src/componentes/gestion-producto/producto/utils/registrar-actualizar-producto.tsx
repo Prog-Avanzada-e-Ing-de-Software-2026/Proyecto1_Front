@@ -16,7 +16,8 @@ import { AlicuotaIva, ResponsePost } from "../../../../interfaces/generales/inte
 import Select from "react-select";
 import { useEnterFocus } from "../../../herramientas/formateo-de-campos/movimiento-campos";
 import { useConfiguracionSistema } from "../../../sistema/ConfiguracionSistemaContext";
-import { parseApiError } from "../../../../utils/errores";
+import { applyApiErrors, ApiFieldMap } from "../../../../utils/errores";
+import { omitEmptyOptionalStrings } from "../../../../utils/payload";
 import { Layers } from "lucide-react";
 import RegistrarActualizarMarcaForm from "../../marca/utils/registrar-actualizar-marca";
 import { ItemProveedor } from "../../../../interfaces/gestion-producto/producto/interfaces-item-proveedor";
@@ -35,6 +36,34 @@ import PorcentajeInput from "../../../herramientas/formateo-de-campos/porcentaje
 import { Alertas, TipoAlerta, TituloAlerta, useAlerts } from "../../../herramientas/alertas/alertas";
 import { generarDenominacionAutomatica } from "../domain/generar-denominacion-automatica";
 
+const productoFieldMap: ApiFieldMap<FormValues> = {
+  denominacion: "denominacion",
+  observacion: "observacion",
+  codigoProveedor: "codigoProveedor",
+  codigoReferencia: "codigoReferencia",
+  codigoBarra: "codigoBarra",
+  stock: "stock",
+  costo: "costo",
+  precio: "precio",
+  porcentaje: "porcentaje",
+  lineaId: "lineaId",
+  marcaId: "marcaId",
+  presentacionId: "presentacionId",
+  alicuotaIva: "alicuotaIva",
+  stockMinimo: "stockMinimo",
+  cantidadPorPack: "cantidadPorPack",
+  utilizaStockMinimo: "utilizaStockMinimo",
+  utilizaPack: "utilizaPack",
+};
+
+const PRODUCTO_SELECTOR_EMPTY_MESSAGES = {
+  marca: "No hay Marcas disponibles.",
+  linea: "No hay Líneas disponibles.",
+  presentacion: "No hay Presentaciones disponibles.",
+} as const;
+
+type PresentacionOptionsMode = "preload" | "search-result" | "preload-error";
+
 export default function RegistrarActualizarProductoForm({
   producto,
   onClose,
@@ -48,7 +77,6 @@ export default function RegistrarActualizarProductoForm({
   const usuarioId = getUsuarioId();
 
   const { configuracion } = useConfiguracionSistema();
-  const [rStockCritico, setStockCritico] = useState(false);
   const [pack, setPack] = useState(false);
   const [usaOferta, setUsaOferta] = useState(false);
   const [lineaSeleccionada, setLineaSeleccionada] = useState<Linea>({} as Linea);
@@ -56,7 +84,7 @@ export default function RegistrarActualizarProductoForm({
   console.log("Configuración del sistema:", configuracion);
 
   const methods = useForm<FormValues>({
-    resolver: yupResolver(schema(rStockCritico, pack, usaOferta)),
+    resolver: yupResolver(schema(pack, usaOferta, !producto)),
     defaultValues: producto
       ? transformData(producto)
       : {
@@ -81,7 +109,7 @@ export default function RegistrarActualizarProductoForm({
   const [marcas, setMarcas] = React.useState<SelectMarca[]>([]);
   const [lineas, setLineas] = React.useState<SelectLinea[]>([]);
   const [presentaciones, setPresentaciones] = React.useState<SelectPresentacion[]>([]);
-  
+  const [presentacionOptionsMode, setPresentacionOptionsMode] = useState<PresentacionOptionsMode>("preload");
   const [denominacionMarca, setDenominacionMarca] = useState(" ");
   const [denominacionLinea, setDenominacionLinea] = useState(" ");
   const [denominacionPresentacion, setDenominacionPresentacion] = useState(" ");
@@ -92,14 +120,14 @@ export default function RegistrarActualizarProductoForm({
   const [mostrarFormularioMarca, setMostrarFormularioMarca] = useState(false);
   const [mostrarFormularioPresentacion, setMostrarFormularioPresentacion] = useState(false);
   const [itemProdAlternativoSinAgregar, setItemProdAlternativoSinAgregar] = useState(false);
-  const [sugerenciaDenominacionActiva, setSugerenciaDenominacionActiva] = useState(!producto);
+  const sugerenciaDenominacionActivaRef = useRef(!producto);
   const ultimaDenominacionAutomaticaRef = useRef("");
+  const preloadErrorAlertSentRef = useRef(false);
   const { alerts, addAlert, removeAlert } = useAlerts();
 
   const stock = watch(`stock`);
   const stockMinimo = watch("stockMinimo");
   const cantidadPorPack = watch("cantidadPorPack");
-  const utilizaStockMinimo = watch("utilizaStockMinimo");
   const utilizaPack = watch("utilizaPack");
   const denominacionActual = watch("denominacion");
   const marcaIdActual = watch("marcaId");
@@ -131,25 +159,23 @@ export default function RegistrarActualizarProductoForm({
   //=============================== FUNCIONALIDAD ==================================
 
   useEffect(() => {
-    if (!utilizaStockMinimo) {
-      setValue("stockMinimo", 0);
-    }
     if (!utilizaPack) {
       setValue("cantidadPorPack", 0);
     }
-    
-  }, [utilizaStockMinimo, utilizaPack, false, setValue]);
+  }, [utilizaPack, false, setValue]);
 
   useEffect(() => {
-    setValue("stockMinimo", lineaSeleccionada.stockMinimo || 0);
-    setValue("utilizaStockMinimo", lineaSeleccionada.utilizaStockMinimo || false);
+    const minimoLinea = lineaSeleccionada?.stockMinimo;
+    if (minimoLinea && minimoLinea > 0) {
+      setValue("stockMinimo", minimoLinea);
+    }
+    setValue("utilizaStockMinimo", lineaSeleccionada?.utilizaStockMinimo || false);
   }, [lineaSeleccionada]);
 
   useEffect(() => {
     setPack(utilizaPack || false);
-    setStockCritico(utilizaStockMinimo || false);
     setUsaOferta(false);
-  }, [utilizaPack, utilizaStockMinimo, false]);
+  }, [utilizaPack, false]);
 
   // CR-005: detectar edición manual vs Denominación automática (solo creación)
   useEffect(() => {
@@ -159,18 +185,18 @@ export default function RegistrarActualizarProductoForm({
 
     const valor = (denominacionActual ?? "").trim();
     if (!valor) {
-      setSugerenciaDenominacionActiva(true);
+      sugerenciaDenominacionActivaRef.current = true;
       return;
     }
 
     if (valor !== ultimaDenominacionAutomaticaRef.current.trim()) {
-      setSugerenciaDenominacionActiva(false);
+      sugerenciaDenominacionActivaRef.current = false;
     }
   }, [denominacionActual, producto]);
 
   // CR-005: sugerir Marca + Línea + Presentación solo al crear
   useEffect(() => {
-    if (producto || !sugerenciaDenominacionActiva) {
+    if (producto || !sugerenciaDenominacionActivaRef.current) {
       return;
     }
 
@@ -201,7 +227,6 @@ export default function RegistrarActualizarProductoForm({
     setValue("denominacion", sugerida, { shouldValidate: true });
   }, [
     producto,
-    sugerenciaDenominacionActiva,
     marcaIdActual,
     lineaIdActual,
     presentacionIdActual,
@@ -217,45 +242,60 @@ export default function RegistrarActualizarProductoForm({
 
   useEffect(() => {
     const fetchData = async () => {
+      setPresentacionOptionsMode("preload");
+
       try {
-        if (producto) {
-          setValue("lineaId", producto.linea.id || 0);
-          setSelectedLinea(producto.linea);
+        const [marcasResponse, lineasResponse, presentacionesResponse] = await Promise.all([
+          ProductoService.obtenerTotales({ denominacion: "" }, "marcas"),
+          ProductoService.obtenerTotales({ denominacion: "" }, "lineas"),
+          PresentacionService.select({ denominacion: "" }),
+        ]);
 
-          setValue("marcaId", producto.marca.id || 0);
-          setSelectedMarca(producto.marca);
-
-          setValue("presentacionId", producto.presentacion?.id || 0);
-          setSelectedPresentacion(producto.presentacion ?? null);
-
-          
-          setValue("denominacion", producto.denominacion || "");
-          setValue("observacion", producto.observacion || null);
-          setValue("codigoProveedor", producto.codigoProveedor || "");
-          setValue("codigoBarra", producto.codigoBarra || null);
-          setValue("stock", producto.stock || 0);
-          setValue("costo", producto.costo || 0);
-          
-          //setValue("oferta", producto.oferta || false);
-          setValue("alicuotaIva", producto.alicuotaIva || 0);
-
-          setValue("stockMinimo", producto.stockMinimo || 0);
-          setValue("utilizaStockMinimo", producto.utilizaStockMinimo || false);
-          setValue("cantidadPorPack", producto.cantidadPorPack || 0);
-          setValue("utilizaPack", producto.utilizaPack || false);
-        
-          console.error("llega aca", producto);
-        } else {
-          const [marcasResponse, lineasResponse] = await Promise.all([
-            ProductoService.obtenerTotales({ denominacion: "" }, "marcas"),
-            ProductoService.obtenerTotales({ denominacion: "" }, "lineas"),
-          ]);
-
-          setMarcas(marcasResponse.data);
-          setLineas(lineasResponse.data);
-        }
+        setMarcas(marcasResponse.data);
+        setLineas(lineasResponse.data);
+        setPresentaciones(presentacionesResponse?.data ?? []);
+        preloadErrorAlertSentRef.current = false;
       } catch (error) {
-        console.error("Error al obtener los datos:", error);
+        setPresentacionOptionsMode("preload-error");
+        console.error("Error al cargar las opciones de Marca, Línea y Presentación:", error);
+        if (!preloadErrorAlertSentRef.current) {
+          preloadErrorAlertSentRef.current = true;
+          addAlert({
+            type: TipoAlerta.ERROR,
+            title: TituloAlerta.ERROR,
+            message: "No se pudieron cargar las opciones de Marca, Línea y Presentación.",
+            autoClose: true,
+          });
+        }
+      }
+
+      if (producto) {
+        setValue("lineaId", producto.linea.id || 0);
+        setSelectedLinea(producto.linea);
+
+        setValue("marcaId", producto.marca.id || 0);
+        setSelectedMarca(producto.marca);
+
+        setValue("presentacionId", producto.presentacion?.id || 0);
+        setSelectedPresentacion(producto.presentacion ?? null);
+
+        
+        setValue("denominacion", producto.denominacion || "");
+        setValue("observacion", producto.observacion || null);
+        setValue("codigoProveedor", producto.codigoProveedor || "");
+        setValue("codigoBarra", producto.codigoBarra || null);
+        setValue("stock", producto.stock || 0);
+        setValue("costo", producto.costo || 0);
+        
+        //setValue("oferta", producto.oferta || false);
+        setValue("alicuotaIva", producto.alicuotaIva || 0);
+
+        setValue("stockMinimo", producto.stockMinimo || 0);
+        setValue("utilizaStockMinimo", producto.utilizaStockMinimo || false);
+        setValue("cantidadPorPack", producto.cantidadPorPack || 0);
+        setValue("utilizaPack", producto.utilizaPack || false);
+      
+        console.error("llega aca", producto);
       }
     };
 
@@ -282,17 +322,28 @@ export default function RegistrarActualizarProductoForm({
       }
 
       if (producto) {
-        const payload = {
-          ...formData,
-          usuarioUpdatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            ...formData,
+            usuarioUpdatedId: usuarioId,
+          },
+          ["observacion", "codigoProveedor", "codigoBarra", "codigoReferencia"],
+        );
+        // cantidadPorPack solo aplica cuando utilizaPack está activo.
+        if (!formData.utilizaPack) delete payload.cantidadPorPack;
 
         response = await ProductoService.actualizar(producto.id, payload);
       } else {
-        const payload = {
-          ...formData,
-          usuarioCreatedId: usuarioId,
-        };
+        const payload = omitEmptyOptionalStrings(
+          {
+            ...formData,
+            stock: Number(formData.stock),
+            usuarioCreatedId: usuarioId,
+          },
+          ["observacion", "codigoProveedor", "codigoBarra", "codigoReferencia"],
+        );
+        // cantidadPorPack solo aplica cuando utilizaPack está activo.
+        if (!formData.utilizaPack) delete payload.cantidadPorPack;
 
         response = await ProductoService.nuevo(payload);
       }
@@ -300,12 +351,7 @@ export default function RegistrarActualizarProductoForm({
       await onSuccess(response.mensaje);
       onClose();
     } catch (error) {
-      const errorMessage = parseApiError(error);
-
-      setError("root", {
-        type: "manual",
-        message: errorMessage,
-      });
+      applyApiErrors(error, setError, productoFieldMap);
     }
   };
 
@@ -330,6 +376,7 @@ export default function RegistrarActualizarProductoForm({
         }
       }
       if (select === "PRESENTACION") {
+        setPresentacionOptionsMode("search-result");
         const response = await PresentacionService.select({
           denominacion: denominacionPresentacion.trim(),
         });
@@ -534,7 +581,7 @@ export default function RegistrarActualizarProductoForm({
                         getOptionValue={(option) => String(option.id)}
                         isDisabled={producto && producto.sistema > 0 ? true : false}
                         onChange={(selectedOption) => {
-                          methods.setValue(`alicuotaIva`, selectedOption?.id || 0);
+                          methods.setValue(`alicuotaIva`, selectedOption?.id ?? null);
                         }}
                         className="text-black"
                         menuPortalTarget={document.body}
@@ -562,15 +609,18 @@ export default function RegistrarActualizarProductoForm({
                   </div>
 
                   <div className="flex-1 min-w-[120px]">
-                    {producto ? (
-                      <CantidadesInput
-                        name={`stock`}
-                        label="Stock"
-                        value={stock || 0}
-                        onChange={(value) => setValue(`stock`, Number(value))}
-                        disabled={true}
-                      />
-                    ) : null}
+                    <CantidadesInput
+                      name="stock"
+                      label="Stock"
+                      value={producto ? stock || 0 : (stock as number)}
+                      decimalScale={3}
+                      onChange={(value) => {
+                        if (!producto) {
+                          setValue("stock", Number(value));
+                        }
+                      }}
+                      disabled={!!producto}
+                    />
                   </div>
                 </div>
 
@@ -591,8 +641,8 @@ export default function RegistrarActualizarProductoForm({
                       name={`stockMinimo`}
                       label="Stock Crítico"
                       value={stockMinimo || 0}
+                      decimalScale={3}
                       onChange={(value) => setValue(`stockMinimo`, Number(value))}
-                      disabled={utilizaStockMinimo ? false : true}
                     />
                   </div>
 
@@ -636,11 +686,12 @@ export default function RegistrarActualizarProductoForm({
                 onEnterLinea={(e) => handleEnterEnSelect(e, "LINEA")}
                 onEnterDenominacion={enterToDenominacionMarca}
                 onLineaChange={(linea) => {
-                  methods.setValue("lineaId", linea?.id || 0);
+                  methods.setValue("lineaId", linea?.id ?? null);
                   setSelectedLinea(linea ?? undefined);
                   setLineaSeleccionada(linea as any);
                 }}
                 onAgregarLinea={() => setMostrarFormularioLinea(true)}
+                mensajeSinOpciones={PRODUCTO_SELECTOR_EMPTY_MESSAGES.linea}
               />
 
               <MarcasSelector
@@ -655,10 +706,11 @@ export default function RegistrarActualizarProductoForm({
                 error={errors.marcaId?.message}
                 onEnterMarca={(e) => handleEnterEnSelect(e, "MARCA")}
                 onChangeMarca={(marca) => {
-                  methods.setValue("marcaId", marca?.id || 0);
+                  methods.setValue("marcaId", marca?.id ?? null);
                   setSelectedMarca(marca ?? undefined);
                 }}
                 onAgregarMarca={() => setMostrarFormularioMarca(true)}
+                mensajeSinOpciones={PRODUCTO_SELECTOR_EMPTY_MESSAGES.marca}
               />
 
               <PresentacionesSelector
@@ -673,10 +725,11 @@ export default function RegistrarActualizarProductoForm({
                 error={errors.presentacionId?.message}
                 onEnterPresentacion={(e) => handleEnterEnSelect(e, "PRESENTACION")}
                 onChangePresentacion={(presentacion) => {
-                  methods.setValue("presentacionId", presentacion?.id || 0);
+                  methods.setValue("presentacionId", presentacion?.id ?? null);
                   setSelectedPresentacion(presentacion);
                 }}
                 onAgregarPresentacion={() => setMostrarFormularioPresentacion(true)}
+                mensajeSinOpciones={presentacionOptionsMode === "preload" ? PRODUCTO_SELECTOR_EMPTY_MESSAGES.presentacion : undefined}
               />
 
               </div>
@@ -690,7 +743,15 @@ export default function RegistrarActualizarProductoForm({
               
             </CardContent>
 
-            {errors.root?.message && <div className="text-red-600 text-center mb-4">{String(errors.root.message)}</div>}
+            {errors.root?.message && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="text-red-600 text-center mb-4"
+              >
+                {String(errors.root.message)}
+              </div>
+            )}
 
             {/* Botón de submit */}
             <CardFooter className="flex justify-center">

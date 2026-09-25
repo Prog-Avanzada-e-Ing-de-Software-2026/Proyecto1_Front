@@ -4,6 +4,7 @@ import { AlicuotaIva } from "../../../../interfaces/generales/interfaces-general
 import { Producto } from "../../../../interfaces/gestion-producto/producto/interfaces-producto";
 import { ItemProveedor } from "../../../../interfaces/gestion-producto/producto/interfaces-item-proveedor";
 import { ItemProdAlternativo } from "../../../../interfaces/gestion-producto/producto/interfaces-item-prod-alternativo";
+import { finiteNumber } from "../../../../utils/yup";
 
 //===================== interfaces para las cosas que se van a ingresar en el formulario y es necesario validarlas ==========//
 
@@ -21,9 +22,9 @@ export interface FormValues {
   costoDolar?: number | null;
   destacado?: boolean | null;
   envioGratis?: boolean | null; */
-  lineaId: number;
-  marcaId: number;
-  presentacionId: number;
+  lineaId: number | null;
+  marcaId: number | null;
+  presentacionId: number | null;
   /* subLineaId?: number | null */
   alicuotaIva: number | null;
   /* ubicacion?: string | null; */
@@ -50,48 +51,58 @@ export interface ItemsProveedorEnPayload {
 
 //===================== schema de validacion ============================================//
 
-export const schema = (utilizaStockMinimo: boolean, utilizaPack: boolean, usaOferta: boolean) =>
-  yup.object().shape({
+export const schema = (
+  utilizaPack: boolean,
+  usaOferta: boolean,
+  isCreate: boolean,
+) =>
+  yup.object<FormValues>().shape({
     denominacion: yup
       .string()
       .trim()
-      .lowercase()
       .required("La denominación es obligatoria.")
-      .max(255, "Máximo 255 caracteres.")
-      .matches(/^[A-Za-z0-9 %-_"'áéíóúÁÉÍÓÚñÑ./]+$/, "Solo se permiten letras, números y espacios."),
+      .max(200, "Máximo 200 caracteres.")
+      .matches(/^[A-Za-z0-9 áéíóúÁÉÍÓÚñÑ.\-/%]+$/, "Solo se permiten letras, números, espacios y los caracteres . - / %"),
     observacion: yup.string().optional().nullable(),
     codigoProveedor: yup.string().optional().nullable(),
     codigoReferencia: yup.string().optional().nullable(),
     codigoBarra: yup.string().optional().max(255, "Máximo 255 caracteres.").nullable(),
-    stock: yup.number().optional().nullable(),
-    costo: yup.number().typeError("El costo debe ser un valor númerico").required("El costo es obligatorio").min(0,"El costo debe ser mayor o igual a 0"),
+    costo: finiteNumber("El costo debe ser un número finito.")
+      .typeError("El costo debe ser un valor númerico")
+      .required("El costo es obligatorio")
+      .min(0, "El costo debe ser mayor o igual a 0"),
     precio: yup.number().typeError("El precio debe ser un valor númerico").required("El precio es obligatorio").min(0,"El costo debe ser mayor o igual a 0").test("precio-mayor-o-igual-costo","El precio debe ser mayor o igual que el costo", function(value){
       const {costo} = this.parent;
       if (value==null || costo == null ) return true;
       return value>= costo;
     }),
-    porcentaje: yup.number().typeError("El porcentaje debe ser un valor númerico").min(0,"El porcentaje mínimo debe ser mayor o igual a 0").max(999, "El porcentaje máximo permitido es de 999").optional().nullable(),
+    porcentaje: finiteNumber("El porcentaje debe ser un número finito.")
+      .typeError("El porcentaje debe ser un valor númerico")
+      .moreThan(0, "El porcentaje debe ser mayor a 0")
+      .max(999, "El porcentaje máximo permitido es de 999")
+      .optional()
+      .nullable(),
     /* costoEnDolar: yup.boolean().optional().nullable(),
     costoDolar: yup.number().optional().nullable(),
     destacado: yup.boolean().optional().nullable(),
     envioGratis: yup.boolean().optional().nullable(), */
-    marcaId: yup
-      .number()
-      .typeError("La linea es obligatoria.")
-      .required("La marca es obligatoria.")
+    marcaId: finiteNumber("La marca debe ser un número finito.")
       .transform((value, originalValue) => (originalValue === "" ? null : value)) // Si el valor es una cadena vacía, lo convierte en null.
-      .required("La marca es obligatoria."),
-    lineaId: yup
-      .number()
       .typeError("La marca es obligatoria.")
-      .required("La línea es obligatoria.")
+      .required("La marca es obligatoria.")
+      .integer("La marca debe ser un número entero.")
+      .moreThan(0, "La marca es obligatoria."),
+    lineaId: finiteNumber("La línea debe ser un número finito.")
       .transform((value, originalValue) => (originalValue === "" ? null : value)) // Si el valor es una cadena vacía, lo convierte en null.
-      .required("La linea es obligatoria."),
-    presentacionId: yup
-      .number()
+      .typeError("La línea es obligatoria.")
+      .required("La línea es obligatoria.")
+      .integer("La línea debe ser un número entero.")
+      .moreThan(0, "La línea es obligatoria."),
+    presentacionId: finiteNumber("La presentación debe ser un número finito.")
+      .transform((value, originalValue) => (originalValue === "" ? null : value)) // Si el valor es una cadena vacía, lo convierte en null.
       .typeError("La presentación es obligatoria.")
       .required("La presentación es obligatoria.")
-      .transform((value, originalValue) => (originalValue === "" ? null : value))
+      .integer("La presentación debe ser un número entero.")
       .moreThan(0, "La presentación es obligatoria."),
     alicuotaIva: yup
       .number()
@@ -104,15 +115,36 @@ export const schema = (utilizaStockMinimo: boolean, utilizaPack: boolean, usaOfe
     .typeError("La sublinea es obligatoria.")
     .optional()
     .nullable(), */
-    stockMinimo: yup.number().when([], {
-      is: () => utilizaStockMinimo,
-      then: (schema) => schema.required("El Stock minimo es obligatorio.").moreThan(0, "El stock minimo debe ser mayor a 0."),
-      otherwise: (schema) => schema.optional(),
-    }),
+    stockMinimo: finiteNumber("El stock mínimo debe ser un número finito.")
+      .typeError("El stock mínimo debe ser un número.")
+      .required("El stock mínimo es obligatorio.")
+      .moreThan(0, "El stock mínimo debe ser mayor que 0."),
     cantidadPorPack: yup.number().when([], {
       is: () => utilizaPack,
-      then: (schema) => schema.required("La cantidad por pack es obligatoria.").moreThan(0, "La cantidad por pack debe ser mayor a 0."),
-      otherwise: (schema) => schema.optional(),
+      then: (schema) =>
+        schema
+          .required("La cantidad por pack es obligatoria.")
+          .test("finite", "La cantidad por pack debe ser un número finito.", (value) => value == null || Number.isFinite(value))
+          .integer("La cantidad por pack debe ser un número entero.")
+          .moreThan(0, "La cantidad por pack debe ser mayor a 0."),
+      otherwise: (schema) =>
+        schema
+          .test("finite", "La cantidad por pack debe ser un número finito.", (value) => value == null || Number.isFinite(value))
+          .optional(),
+    }),
+    stock: yup.number().when([], {
+      is: () => isCreate,
+      then: (schema) =>
+        schema
+          .typeError("El stock debe ser un valor numérico.")
+          .required("El stock es obligatorio.")
+          .test("finite", "El stock debe ser un número finito.", (value) => value == null || Number.isFinite(value))
+          .moreThan(0, "El stock debe ser mayor a 0."),
+      otherwise: (schema) =>
+        schema
+          .test("finite", "El stock debe ser un número finito.", (value) => value == null || Number.isFinite(value))
+          .moreThan(0, "El stock debe ser mayor a 0.")
+          .optional(),
     }),
    /*  cantidadOferta: yup.number().when([], {
       is: () => usaOferta,
@@ -176,9 +208,9 @@ export const transformData = (producto: Producto): FormValues => {
     envioGratis: producto.envioGratis ?? null, */
     alicuotaIva: producto.alicuotaIva ?? null,
    // ubicacion: producto.ubicacion ?? null,
-    marcaId: producto.marca.id ?? 0,
-    lineaId: producto.linea.id ?? 0,
-    presentacionId: producto.presentacion?.id ?? 0,
+    marcaId: producto.marca.id ?? null,
+    lineaId: producto.linea.id ?? null,
+    presentacionId: producto.presentacion?.id ?? null,
    /*  subLineaId: producto.sublinea?.id ?? 0, */
 
     stockMinimo: producto.stockMinimo ?? null,

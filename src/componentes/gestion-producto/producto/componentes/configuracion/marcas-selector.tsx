@@ -15,6 +15,7 @@ export default function MarcasSelector(props: {
   onEnterMarca: (e: React.KeyboardEvent) => void;
   onChangeMarca: (m: SelectMarca | null) => void;
   onAgregarMarca: () => void;
+  mensajeSinOpciones?: string;
 }) {
   return (
     <EntidadSelectorBase<SelectMarca>
@@ -31,6 +32,7 @@ export default function MarcasSelector(props: {
       onEnterInput={props.onEnterMarca}
       onChange={props.onChangeMarca}
       onAgregar={props.onAgregarMarca}
+      mensajeSinOpciones={props.mensajeSinOpciones}
     />
   );
 }

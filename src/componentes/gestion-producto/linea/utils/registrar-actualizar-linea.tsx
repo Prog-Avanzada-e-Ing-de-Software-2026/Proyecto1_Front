@@ -11,7 +11,7 @@ import LineaService from "../services/linea-service";
 import { Linea } from "../../../../interfaces/gestion-producto/linea/interfaces-linea";
 
 import { Layers } from "lucide-react";
-import { parseApiError } from "../../../../utils/errores";
+import { applyApiErrors, ApiFieldMap, parseApiError } from "../../../../utils/errores";
 import { ResponsePost } from "../../../../interfaces/generales/interfaces-generales";
 import CantidadesInput from "../../../herramientas/formateo-de-campos/cantidades-input";
 import { getUsuarioId } from "../../../../utils/auth";
@@ -25,6 +25,14 @@ import { SelectSuperlinea } from "../../../../interfaces/gestion-producto/superl
 import SuperLineaService from "../../superlinea/services/superlinea-service";
 import RegistrarSuperlinea from "../../superlinea/utils/registrar-superlinea";
 import SuperlineasSelector from "../componentes/superlineas-selector";
+
+const lineaFieldMap: ApiFieldMap<FormValues> = {
+  denominacion: "denominacion",
+  observacion: "observacion",
+  stockMinimo: "stockMinimo",
+  utilizaStockMinimo: "utilizaStockMinimo",
+  superLineaId: "superLineaId",
+};
 
 export default function RegistrarActualizarLineaForm({
   linea,
@@ -139,7 +147,7 @@ export default function RegistrarActualizarLineaForm({
         onSuccess("mensaje" in response && typeof response.mensaje === "string" ? response.mensaje : "Línea registrada correctamente.");
       }
     } catch (error) {
-      setError("root", { type: "manual", message: parseApiError(error) });
+      applyApiErrors(error, setError, lineaFieldMap);
     }
   };
 
@@ -211,13 +219,20 @@ export default function RegistrarActualizarLineaForm({
                     name="stockMinimo"
                     label="Stock Crítico"
                     value={stockMinimo || 0}
+                    decimalScale={3}
                     onChange={(value) => setValue("stockMinimo", Number(value))}
                     disabled={utilizaStockMinimo ? false : true}
                   />
                 </div>
               </CardContent>
               {errors.root?.message && (
-                <div className="text-red-600 text-center mb-4">{String(errors.root.message)}</div>
+                <div
+                  className="text-red-600 text-center mb-4"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {String(errors.root.message)}
+                </div>
               )}
               {superlineaSuccess && (
                 <div className="text-green-600 text-center mb-4">{superlineaSuccess}</div>
