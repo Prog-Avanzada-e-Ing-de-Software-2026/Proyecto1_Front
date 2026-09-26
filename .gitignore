@@ -15,6 +15,9 @@ dist-ssr
 # Yarn
 .yarn/
 
+# npm lockfile (project standardizes on Yarn 4)
+package-lock.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
