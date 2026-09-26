@@ -136,6 +136,7 @@ export default function ConsultarProductos() {
     limpiarFiltros,
     buscar,
     setBuscar,
+    busquedaRapida,
     setBusquedaRapida,
   } = useFiltrosContext();
 
@@ -400,6 +401,21 @@ export default function ConsultarProductos() {
     setIsModalOpen(false);
   };
 
+  // Refresca el listado manteniendo el criterio de búsqueda vigente del usuario:
+  // búsqueda parcial CR-004, búsqueda rápida por código o filtros de sidebar.
+  const refrescarListadoVigente = async () => {
+    if (criterioBusqueda) {
+      await ejecutarBusquedaActivaRef.current();
+    } else if (busquedaRapida) {
+      await handleBuscarProductosRapido();
+    } else {
+      await handleBuscarProductos();
+    }
+  };
+
+  // Alta: refresca la lista SOLO si el usuario tiene una búsqueda activa con
+  // criterio (tabla ya cargada por búsqueda). Si la tabla está vacía o sin
+  // criterio (estado inicial CR-004), NO se carga nada.
   const handleSuccess = async (mensajeAlerta: string) => {
     closeModal();
 
@@ -411,29 +427,17 @@ export default function ConsultarProductos() {
       duration: 3000,
     });
 
-    setLoading(true);
+    const hayBusquedaActiva =
+      criterioBusqueda !== null ||
+      (modoBusqueda === null && (busquedaRapida || buscar.cont > 0));
 
-    const filtrosConPaginacion = {
-      denominacion: valoresFiltros.denominacion,
-      codigoProveedor: valoresFiltros.codigoProveedor,
-      codigoReferencia: valoresFiltros.codigoReferencia,
-      lineaId: valoresFiltros.lineaId,
-      marcaId: valoresFiltros.marcaId,
-      proveedorId: valoresFiltros.proveedorId,
-      conStock: valoresFiltros.conStock,
-      codReferenciaExacto: valoresFiltros.codReferenciaExacto,
-      codProveedorExacto: valoresFiltros.codProveedorExacto,
-      skip: skip,
-      take: take,
-    };
-
-    const productosFiltrados = await ProductoService.obtener(filtrosConPaginacion);
-
-    setEntidadesTotales(productosFiltrados.total);
-    setProductos(productosFiltrados.data);
-    setLoading(false);
+    if (hayBusquedaActiva) {
+      await refrescarListadoVigente();
+    }
   };
 
+  // Edición: refresca el listado vigente respetando el criterio activo. Con un
+  // modo CR activo sin criterio comprometido no hay nada que refrescar.
   const handleActualizarSuccess = async (mensajeAlerta: string) => {
     closeModal();
 
@@ -445,9 +449,9 @@ export default function ConsultarProductos() {
       duration: 3000,
     });
 
-    setLoading(true);
-
-    await handleBuscarProductos();
+    if (criterioBusqueda || modoBusqueda === null) {
+      await refrescarListadoVigente();
+    }
   };
 
   const handleBuscarProductos = async (botonBuscar?: boolean) => {
