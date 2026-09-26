@@ -25,3 +25,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Local AI runtime state
+.atl/
+
+# Environment Variables
+.env
+.env.*
+
+# Temp Files
+docs/temp/*

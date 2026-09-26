@@ -1,0 +1,75 @@
+schema: spec-driven
+
+context: |
+  Tech stack: React 19, TypeScript 5.7, Vite 6, React Router 7, Tailwind CSS 3, Yarn 4, Node.js 24.
+  Architecture: Browser SPA organized by pages, feature components, hooks, contexts, services, interfaces, and shared UI utilities.
+  State and data: React Context and Jotai for client state; Axios services for backend communication.
+  Testing: No automated test runner, test files, coverage tool, or test CI job is currently configured.
+  Quality: ESLint flat config, TypeScript project references, and Prettier configuration.
+
+strict_tdd: false
+
+projects:
+  - path: "."
+    stack: "React 19 / TypeScript 5.7 / Vite 6"
+    test_command: ""
+    test_framework: ""
+    test_layers:
+      unit: false
+      integration: false
+      e2e: false
+    coverage_command: ""
+    quality:
+      linter: "yarn lint"
+      type_checker: "yarn tsc -b"
+      formatter: ""
+
+testing:
+  detected_at: "2026-09-13"
+  strict_tdd: false
+  workspace_test_command: ""
+  reason: "No explicit workspace-level test command covers the discovered project."
+  baseline:
+    build: "passing"
+    lint: "failing on pre-existing errors"
+    typecheck: "failing on pre-existing errors"
+  projects:
+    - path: "."
+      test_command: ""
+      framework: ""
+      layers:
+        unit: false
+        integration: false
+        e2e: false
+      coverage_command: ""
+      linter_command: "yarn lint"
+      typecheck_command: "yarn tsc -b"
+      formatter_command: ""
+
+rules:
+  proposal:
+    - Define scope, user impact, risks, and rollback strategy for risky changes.
+  specs:
+    - Use RFC 2119 keywords for normative requirements.
+    - Express acceptance scenarios with Given/When/Then.
+  design:
+    - Preserve the existing feature-oriented component, hook, service, and interface boundaries.
+    - Document architectural decisions and API contract changes with rationale.
+  tasks:
+    - Group work by phase and use hierarchical numbering.
+    - Keep each task independently verifiable and completable in one session.
+  apply:
+    guidelines:
+      - Follow existing React, TypeScript, and naming conventions.
+      - Keep UI copy consistent with the existing application language.
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: "yarn build"
+    lint_command: "yarn lint"
+    typecheck_command: "yarn tsc -b"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive requirement deltas.
+    - Preserve archived changes as immutable audit history.

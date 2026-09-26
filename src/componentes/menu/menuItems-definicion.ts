@@ -22,6 +22,7 @@ import {
   Smartphone,
   Bell,
   MessageSquare,
+  Package,
 } from "lucide-react";
 import { Rol } from "../../interfaces/generales/interfaces-generales";
 
@@ -60,16 +61,24 @@ export const menuItems: MenuItem[] = [
       },
       {
         icon: DollarSign,
+        label: "Actualización masiva de precios",
+        path: "/admin/cambio-precios-masivo",
+        roles: [Rol.ROOT, Rol.ADMINISTRADOR, Rol.EMPLEADO],
+      },
+      {
+        icon: DollarSign,
         label: "Configuración",
         path: "",
         subMenu: [
           { icon: Tag, label: "Marca", path: "marca" },
           { icon: Layers, label: "Líneas", path: "linea" },
+          { icon: Layers, label: "SuperLíneas", path: "superlinea" },
+          { icon: Package, label: "Presentaciones", path: "presentacion" },
         ],
         roles: [Rol.ADMINISTRADOR,Rol.ROOT,Rol.ROOT],
       },
     ],
-    roles: [Rol.ADMINISTRADOR, Rol.VENDEDOR, Rol.REPARTIDOR, Rol.REPOSITOR,Rol.ROOT],
+    roles: [Rol.ADMINISTRADOR, Rol.EMPLEADO, Rol.VENDEDOR, Rol.REPARTIDOR, Rol.REPOSITOR,Rol.ROOT],
   },
 
   

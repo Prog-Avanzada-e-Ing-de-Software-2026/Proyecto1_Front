@@ -17,6 +17,7 @@ export default function PresentacionesSelector(props: {
   onEnterPresentacion: (e: React.KeyboardEvent) => void;
   onChangePresentacion: (p: SelectPresentacion | null) => void;
   onAgregarPresentacion: () => void;
+  mensajeSinOpciones?: string;
 }) {
   return (
     <EntidadSelectorBase<SelectPresentacion>
@@ -33,6 +34,7 @@ export default function PresentacionesSelector(props: {
       onEnterInput={props.onEnterPresentacion}
       onChange={props.onChangePresentacion}
       onAgregar={props.onAgregarPresentacion}
+      mensajeSinOpciones={props.mensajeSinOpciones}
     />
   );
 }

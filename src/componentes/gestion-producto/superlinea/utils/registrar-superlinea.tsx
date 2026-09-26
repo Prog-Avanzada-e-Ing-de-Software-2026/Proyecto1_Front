@@ -1,0 +1,124 @@
+import { FormProvider, useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { Tag } from "lucide-react";
+import { Card, CardContent, CardFooter } from "../../../ui/Card";
+import { Button } from "../../../ui/Button";
+import FormInput from "../../../herramientas/formateo-de-campos/form-input";
+import EncabezadoFormularios from "../../../ui/encabezadoFormularios";
+import {
+  TipoAlertaConfirmacion,
+  TituloAlertaConfirmacion,
+  useConfirmation,
+} from "../../../herramientas/alertas/alertas-confirmacion";
+import { getUsuarioId } from "../../../../utils/auth";
+import { applyApiErrors, ApiFieldMap } from "../../../../utils/errores";
+import { FormValues, schema } from "../interfaces/interfaces-validaciones-superlinea";
+import { transformData } from "../interfaces/interfaces-validaciones-superlinea";
+import SuperLineaService from "../services/superlinea-service";
+import { SuperLineaDto } from "../../../../interfaces/gestion-producto/superlinea/interfaces-superlinea";
+
+const superlineaFieldMap: ApiFieldMap<FormValues> = {
+  denominacion: "denominacion",
+  observacion: "observacion",
+};
+
+export default function RegistrarSuperlinea({
+  onClose,
+  onSuccess,
+  superLinea,
+}: Readonly<{
+  onClose: () => void;
+  onSuccess: (message: string) => Promise<void> | void;
+  superLinea?: SuperLineaDto;
+}>) {
+  const usuarioId = getUsuarioId();
+  const { showConfirmation, AlertasConfirmacion } = useConfirmation();
+  const methods = useForm<FormValues>({
+    resolver: yupResolver(schema) as any,
+    defaultValues: superLinea ? transformData(superLinea) : { denominacion: "", observacion: null },
+  });
+  const {
+    handleSubmit,
+    setError,
+    formState: { isSubmitting, errors },
+  } = methods;
+
+  const onSubmit = async (formData: FormValues) => {
+    try {
+      const observacion = formData.observacion?.trim();
+      const payload = {
+        denominacion: formData.denominacion,
+        ...(observacion ? { observacion } : {}),
+      };
+
+      const response = superLinea
+        ? await SuperLineaService.actualizar(superLinea.id, { ...payload, usuarioUpdatedId: usuarioId })
+        : await SuperLineaService.nuevo({ ...payload, usuarioCreatedId: usuarioId });
+      await onSuccess(response.mensaje);
+      onClose();
+    } catch (error) {
+      applyApiErrors(error, setError, superlineaFieldMap);
+    }
+  };
+
+  const handleOnClose = async () => {
+    const confirmed = await showConfirmation({
+      type: TipoAlertaConfirmacion.DEFAULT,
+      title: TituloAlertaConfirmacion.DEFAULT,
+      message: "¿Estás seguro de que quieres cerrar el formulario? NO se guardaran los cambios.",
+      confirmText: "Aceptar",
+      cancelText: "Cancelar",
+      onConfirm: () => {},
+    });
+
+    if (confirmed) onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[60] overflow-y-auto py-5">
+      <Card className="w-full max-w-2xl bg-white mx-auto shadow-lg rounded-2xl overflow-hidden">
+        <EncabezadoFormularios
+          title={superLinea ? "Actualizar SuperLínea" : "Registrar SuperLínea"}
+          subtitle={superLinea ? "Modifica los datos de la SuperLínea." : "Ingresa los datos de la nueva SuperLínea."}
+          icon={<Tag className="form-icon" />}
+          onClose={handleOnClose}
+        />
+
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <CardContent className="space-y-3 px-3 py-2">
+              <FormInput
+                name="denominacion"
+                label="Denominación"
+                placeholder="Ingresa la denominación"
+              />
+              <FormInput
+                name="observacion"
+                label="Observación"
+                placeholder="Ingresa una observación (opcional)"
+              />
+            </CardContent>
+
+            {errors.root?.message && (
+              <div
+                className="text-red-600 text-center mb-4"
+                role="alert"
+                aria-live="assertive"
+              >
+                {String(errors.root.message)}
+              </div>
+            )}
+
+            <CardFooter className="flex justify-center">
+              <Button type="submit" disabled={isSubmitting} className="btn btn-dark">
+                {isSubmitting ? (superLinea ? "Actualizando..." : "Registrando...") : superLinea ? "Actualizar" : "Registrar"}
+              </Button>
+            </CardFooter>
+          </form>
+        </FormProvider>
+      </Card>
+
+      <AlertasConfirmacion />
+    </div>
+  );
+}

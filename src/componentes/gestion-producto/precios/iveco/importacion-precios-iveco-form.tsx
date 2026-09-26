@@ -11,8 +11,12 @@ import PriceInput from "../../../herramientas/formateo-de-campos/price-input";
 import CargaArchivo from "../carga-archivo";
 import { CheckCircle, DollarSign, Upload } from "lucide-react";
 import { useConfiguracionSistema } from "../../../sistema/ConfiguracionSistemaContext";
-import { parseApiError } from "../../../../utils/errores";
+import { applyApiErrors, ApiFieldMap } from "../../../../utils/errores";
 import { getUsuarioId } from "../../../../utils/auth";
+
+const cotizacionFieldMap: ApiFieldMap<FormValues> = {
+  cotizacionDolar: "cotizacionDolar",
+};
 
 export default function ImportacionPreciosIvecoForm({
   onClose,
@@ -29,7 +33,9 @@ export default function ImportacionPreciosIvecoForm({
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
 
   //=============================== FUNCIONALIDAD ==================================
-  const schema = crearSchemaValidacion(configuracion?.maximoDolar ?? 0);
+  const maximoDolar = configuracion?.maximoDolar;
+  const configuracionDisponible = Number.isFinite(maximoDolar);
+  const schema = crearSchemaValidacion(maximoDolar);
 
   const methods = useForm<FormValues>({
     resolver: yupResolver(schema),
@@ -46,6 +52,14 @@ export default function ImportacionPreciosIvecoForm({
   const cotizacionDolar = watch("cotizacionDolar");
 
   const onSubmit = async (data: FormValues) => {
+    if (!configuracionDisponible) {
+      setError("root", {
+        type: "manual",
+        message: "La configuración de cotización no está disponible.",
+      });
+      return;
+    }
+
     try {
       const isValid = await methods.trigger([`cotizacionDolar`]);
       if (!isValid) {
@@ -73,12 +87,7 @@ export default function ImportacionPreciosIvecoForm({
     } catch (error) {
       console.error("Error al guardar el producto:", error);
 
-      const errorMessage = parseApiError(error);
-
-      setError("root", {
-        type: "manual",
-        message: errorMessage,
-      });
+      applyApiErrors(error, setError, cotizacionFieldMap);
     }
   };
 
@@ -126,6 +135,15 @@ export default function ImportacionPreciosIvecoForm({
                   className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
               </div>
+              {!configuracionDisponible && (
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="text-red-600 text-sm"
+                >
+                  La configuración de cotización no está disponible.
+                </div>
+              )}
             </div>
 
             {/* Sección de carga de archivo */}
@@ -146,7 +164,15 @@ export default function ImportacionPreciosIvecoForm({
             </div>
 
             {/* Mensaje de error */}
-            {errors.root?.message && <div className="text-red-600 text-center mb-4">{String(errors.root.message)}</div>}
+            {errors.root?.message && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                className="text-red-600 text-center mb-4"
+              >
+                {String(errors.root.message)}
+              </div>
+            )}
             {mensajeExito && (
               <div className="flex items-center space-x-2 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -167,7 +193,7 @@ export default function ImportacionPreciosIvecoForm({
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !file || !!mensajeExito}
+                disabled={isSubmitting || !file || !!mensajeExito || !configuracionDisponible}
                 className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl py-3 font-medium shadow-lg hover:shadow-xl transform disabled:transform-none transition-all duration-200 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (

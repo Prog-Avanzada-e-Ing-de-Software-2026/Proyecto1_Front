@@ -36,6 +36,7 @@ export interface Producto {
   usuarioUpdatedId: number;
   linea: SelectLinea;
   marca: SelectMarca;
+  presentacion: SelectPresentacion;
   /* itemsAlternativo?: ItemProdAlternativo[] | null;
   poseeAlternativos: boolean;
   esAlternativo: boolean; */
@@ -45,7 +46,6 @@ export interface Producto {
   precioMayoristaConIva: number;
   precioClienteConIva: number;
   precioOfertaConIva: number;
-  presentacion: SelectPresentacion;
   itemsProveedor?: ItemProveedor[] | null;
  */
   stockMinimo: number;
@@ -86,6 +86,22 @@ export interface ConsultarProducto {
   precioOfertaConIva: number;
 }
 
+export interface ProductoListResponse {
+  data: ConsultarProducto[];
+  total: number;
+}
+
+export interface BusquedaProductoPorDenominacionParams {
+  denominacion: string;
+  skip: number;
+  take: number;
+}
+
+export interface BusquedaProductoPorSuperlineaParams {
+  superLineaId: number;
+  skip: number;
+  take: number;
+}
 
 export interface ConsultarProductosCambioPreciosMasivo {
   id: number;

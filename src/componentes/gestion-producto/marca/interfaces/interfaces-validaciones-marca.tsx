@@ -8,7 +8,6 @@ export const schema = yup.object().shape({
   denominacion: yup
     .string()
     .trim()
-    .lowercase()
     .required("La denominación es obligatoria.")
     .max(255, "La denominación no puede superar los 255 caracteres.")
     .matches(/^[A-Za-z0-9 áéíóúÁÉÍÓÚñÑ]+$/, "Solo se permiten letras, números y espacios."),

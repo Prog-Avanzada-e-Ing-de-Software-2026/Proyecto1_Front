@@ -215,3 +215,9 @@ export interface SelectVendedor {
   id: number;
   denominacion: string;
 }
+
+export interface SelectOption {
+  codigo: number;
+  nombre: string;
+  descripcion: string;
+}

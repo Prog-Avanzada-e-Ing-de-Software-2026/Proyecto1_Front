@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useId, useRef } from "react";
 import { NumericFormat } from "react-number-format";
 import { Label } from "../../ui/Label";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useController } from "react-hook-form";
 
 interface PorcentajeInputProps {
   name: string;
@@ -12,6 +12,36 @@ interface PorcentajeInputProps {
   onChange: (value: number) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   inputRef?: React.Ref<HTMLInputElement>;
+}
+
+function getFieldError(
+  errors: unknown,
+  name: string,
+): { message?: unknown } | undefined {
+  const parts = name.split(".");
+  let current: unknown = errors;
+  for (const part of parts) {
+    if (current && typeof current === "object") {
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return undefined;
+    }
+  }
+  return typeof current === "object" && current !== null
+    ? (current as { message?: unknown })
+    : undefined;
+}
+
+function setRef<T>(
+  ref: React.Ref<T> | null | undefined,
+  value: T | null,
+): void {
+  if (!ref) return;
+  if (typeof ref === "function") {
+    (ref as (instance: T | null) => void)(value);
+  } else {
+    (ref as React.MutableRefObject<T | null>).current = value;
+  }
 }
 
 const PorcentajeInput: React.FC<PorcentajeInputProps> = ({
@@ -25,13 +55,24 @@ const PorcentajeInput: React.FC<PorcentajeInputProps> = ({
   inputRef,
 }) => {
   const {
+    control,
     formState: { errors },
   } = useFormContext();
+  const { field } = useController({ name, control });
+  const id = useId();
+  const errorId = `${id}-error`;
+  const internalRef = useRef<HTMLInputElement>(null);
+
+  const setInputRef = (el: HTMLInputElement | null) => {
+    field.ref(el);
+    setRef(internalRef, el);
+    setRef(inputRef, el);
+  };
 
   const handleFocus = () => {
     setTimeout(() => {
-      if (inputRef && "current" in inputRef && inputRef.current) {
-        const input = inputRef.current;
+      const input = internalRef.current;
+      if (input) {
         const valueStr = input.value;
         const commaIndex = valueStr.indexOf(",");
 
@@ -51,17 +92,22 @@ const PorcentajeInput: React.FC<PorcentajeInputProps> = ({
     onKeyDown?.(e);
   };
 
+  const fieldError = getFieldError(errors, name);
+  const errorMessage = fieldError?.message as string | undefined;
+  const hasError = !!fieldError;
+
   return (
     <div className="space-y-1 sm:space-y-2">
-      <Label htmlFor={name} className="label-base">
+      <Label htmlFor={id} className="label-base">
         {label}
       </Label>
       <div className="relative">
         <NumericFormat
-          getInputRef={inputRef}
+          getInputRef={setInputRef}
           onKeyDown={handleKeyDown}
           value={value}
           name={name}
+          id={id}
           suffix=" %"
           thousandSeparator="."
           decimalSeparator=","
@@ -78,6 +124,8 @@ const PorcentajeInput: React.FC<PorcentajeInputProps> = ({
             onChange(values.floatValue ?? 0);
           }}
           onFocus={handleFocus}
+          aria-invalid={hasError}
+          aria-describedby={hasError ? errorId : undefined}
           className={
             className
               ? className
@@ -86,7 +134,16 @@ const PorcentajeInput: React.FC<PorcentajeInputProps> = ({
                 : "w-full text-right p-2 border border-gray-300 bg-white rounded-md text-black"
           }
         />
-        {errors[name] && <small className="text-red-500">{errors[name]?.message as string}</small>}
+        {hasError && (
+          <small
+            id={errorId}
+            role="alert"
+            aria-live="polite"
+            className="text-red-500"
+          >
+            {errorMessage}
+          </small>
+        )}
       </div>
     </div>
   );
